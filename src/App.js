@@ -1,26 +1,37 @@
-import React, { Component } from 'react';
-import logo from './logo.svg';
-import './App.css';
+// @flow
 
-class App extends Component {
+import * as React from 'react';
+
+import Grid from '@material-ui/core/Grid';
+
+import DisplayPage from 'module/display/DisplayPage';
+import EditorPage from 'module/editor/EditorPage';
+
+type State = {
+  code: ?Function
+};
+
+class App extends React.PureComponent<void, State> {
+  state = {
+    code: null,
+  };
+
+  handleChange = (code: string) => {
+    this.setState({code});
+  };
+
   render() {
+    const {code} = this.state;
+
     return (
-      <div className="App">
-        <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <p>
-            Edit <code>src/App.js</code> and save to reload.
-          </p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-        </header>
-      </div>
+      <Grid container spacing={32}>
+        <Grid item xs>
+          <DisplayPage code={code} />
+        </Grid>
+        <Grid item xs>
+          <EditorPage onChange={this.handleChange} />
+        </Grid>
+      </Grid>
     );
   }
 }
