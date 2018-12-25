@@ -2,11 +2,23 @@
 /** @jsx jsx */
 
 import * as React from 'react';
+import {connect} from 'react-redux';
 import {css, jsx} from '@emotion/core';
 
-import TextField from '@material-ui/core/TextField';
-import Paper from '@material-ui/core/Paper';
-import {Button, CircularProgress} from '@material-ui/core';
+import {
+  Button,
+  CircularProgress,
+  Paper,
+  TextField,
+} from '@material-ui/core';
+
+import {
+  simulate,
+  playTimeline,
+  getSimulating,
+  getTimeline,
+} from 'game/reducer';
+import type {UpdatePlayerFunction} from 'game/types';
 
 const defaultValue = `
 function updatePlayer(player, ball) {
@@ -20,6 +32,7 @@ function updatePlayer(player, ball) {
 }
 `;
 
+// TODO: try-catch
 // eslint-disable-next-line no-new-func
 const compile = value => window.Function(`"use strict";return (${value})`)();
 
@@ -29,18 +42,37 @@ const styles = {
   `,
   buttons: css`
     display: flex;
+    align-items: center;
+  `,
+  buttonContainer: css`
+    position: relative;
+    margin: 8px;
   `,
   progress: css`
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-top: -12px;
+    margin-left: -12px;
   `,
 };
 
 type Props = {
+  simulating: boolean,
+  timelineExists: boolean,
+  handleSimulateClick: (UpdatePlayerFunction) => void,
+  handlePlayClick: () => void,
   onChange: (value: Function) => void
 };
 
-const EditorPage = ({onChange}: Props) => {
+const EditorPage = ({
+  simulating,
+  timelineExists,
+  handleSimulateClick,
+  handlePlayClick,
+  onChange,
+}: Props) => {
   const inputEl = React.useRef(null);
-  const [simulating, setSimulating] = React.useState(false);
 
   return (
     <Paper css={styles.container}>
@@ -61,19 +93,34 @@ const EditorPage = ({onChange}: Props) => {
         >
           Apply
         </Button>
-        <div>
+        <div css={styles.buttonContainer}>
           <Button
             variant="contained"
             color="primary"
-            onClick={() => setSimulating(true)}
+            onClick={() => inputEl.current && handleSimulateClick(compile(inputEl.current.value))}
+            disabled={simulating}
           >
             Start simulation
           </Button>
           {simulating && <CircularProgress size={24} css={styles.progress} />}
         </div>
+        <Button
+          variant="contained"
+          color="primary"
+          disabled={!timelineExists}
+          onClick={handlePlayClick}
+        >
+          Play
+        </Button>
       </div>
     </Paper>
   );
 };
 
-export default EditorPage;
+export default connect(state => ({
+  simulating: getSimulating(state),
+  timelineExists: !!getTimeline(state),
+}), {
+  handleSimulateClick: simulate,
+  handlePlayClick: playTimeline,
+})(EditorPage);
