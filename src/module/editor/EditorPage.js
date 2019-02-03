@@ -18,23 +18,31 @@ import {
   getSimulating,
   getTimeline,
 } from 'game/reducer';
+import {compile} from 'game/game';
 import type {UpdatePlayerFunction} from 'game/types';
 
 const defaultValue = `
-function updatePlayer(player, ball) {
-  const dir = ball.pos.clone().subtract(player.pos).normalize();
+function updatePlayer(player, enemies) {
+  let dir = player.dir;
+  let velocity;
+
+  const closest = enemies.sort((e1, e2) => (e1.pos.distance(player.pos) - e2.pos.distance(player.pos)))[0];
+
+  if(closest.size < player.size) {
+    dir = closest.pos.clone().subtract(player.pos).normalize();
+    velocity = 5;
+  } else {
+    dir = closest.pos.clone().subtract(player.pos).invert().normalize();
+    velocity = 3;
+  }
 
   return {
     ...player,
     dir,
-    velocity: 3,
+    velocity,
   };
 }
 `;
-
-// TODO: try-catch
-// eslint-disable-next-line no-new-func
-const compile = value => window.Function(`"use strict";return (${value})`)();
 
 const styles = {
   container: css`
@@ -97,7 +105,7 @@ const EditorPage = ({
           <Button
             variant="contained"
             color="primary"
-            onClick={() => inputEl.current && handleSimulateClick(compile(inputEl.current.value))}
+            onClick={() => inputEl.current && handleSimulateClick(inputEl.current.value)}
             disabled={simulating}
           >
             Start simulation
@@ -124,3 +132,6 @@ export default connect(state => ({
   handleSimulateClick: simulate,
   handlePlayClick: playTimeline,
 })(EditorPage);
+export {
+  compile,
+};

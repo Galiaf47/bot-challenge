@@ -7,11 +7,15 @@
     "@emotion/styled": "^10.0.5",
     "@material-ui/core": "^3.7.0",
     "@material-ui/icons": "^3.0.1",
+    "axios": "^0.18.0",
+    "body-parser": "^1.18.3",
+    "cors": "^2.8.5",
+    "express": "^4.16.4",
     "flow-bin": "^0.89.0",
     "lodash": "^4.17.11",
     "moment": "^2.23.0",
-    "react": "^16.7.0-alpha.2",
-    "react-dom": "^16.7.0-alpha.2",
+    "react": "^16.8.0-alpha.1",
+    "react-dom": "^16.8.0-alpha.1",
     "react-redux": "^6.0.0",
     "react-scripts": "2.1.1",
     "redux": "^4.0.1",
@@ -19,6 +23,7 @@
     "victor": "^1.1.0"
   },
   "scripts": {
+    "server:run": "nodemon --exec babel-node --presets=@babel/preset-env,@babel/preset-flow -- server",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
@@ -52,11 +57,15 @@
     "not op_mini all"
   ],
   "devDependencies": {
+    "@babel/node": "^7.2.2",
+    "@babel/preset-env": "^7.3.1",
+    "@babel/preset-flow": "^7.0.0",
     "eslint-config-airbnb": "17.1.0",
     "eslint-config-senla": "git+ssh://git@git.senla.eu:style-guide/javascript.git",
     "eslint-plugin-import": "^2.14.0",
     "eslint-plugin-jsx-a11y": "^6.1.1",
-    "eslint-plugin-react": "^7.11.0"
+    "eslint-plugin-react": "^7.11.0",
+    "nodemon": "^1.18.9"
   },
   "license": "MIT"
 }

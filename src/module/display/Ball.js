@@ -5,24 +5,21 @@ import React from 'react';
 import styled from '@emotion/styled';
 import ChevronRightIcon from '@material-ui/icons/ChevronRight';
 
-import settings from 'game/settings';
 import type {DynamicEntity} from 'game/types';
-
-const SIZE = settings.playerSize;
-const HALF = SIZE / 2;
 
 const BallContainer = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-around;
   position: absolute;
-  left: ${({entity}) => entity.pos.x - HALF}px;
-  top: ${({entity}) => entity.pos.y - HALF}px;
-  transform: rotate(${({entity}) => entity.dir.angle()}rad);
-  width: ${SIZE}px;
-  height: ${SIZE}px;
+  left: ${({entity}) => entity.pos.x - entity.size}px;
+  top: ${({entity}) => entity.pos.y - entity.size}px;
+  transform: rotate(${({entity}) => entity.dir}rad);
+  width: ${({entity}) => entity.size * 2}px;
+  height: ${({entity}) => entity.size * 2}px;
   background-color: ${({color}) => color};
-  border-radius: ${SIZE / 2}px;
+  border-radius: ${({entity}) => entity.size}px;
+  z-index: ${({entity}) => entity.size};
 `;
 
 type Props = {

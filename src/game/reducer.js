@@ -3,12 +3,13 @@
 import type {ThunkAction} from 'core/types/reducer';
 import type {RootState} from 'app/types';
 import * as logger from 'logger';
-import type {UpdatePlayerFunction, Timeline} from './types';
-import * as game from './game';
+import {postSimulate} from 'data';
+import type {Player, Timeline} from 'data/types';
 
 const SET_SIMULATING = 'bcsdk/game/SET_SIMULATING';
 const SET_TIMELINE = 'bcsdk/game/SET_TIMELINE';
 const SET_PLAY_TIMELINE = 'bcsdk/game/SET_PLAY_TIMELINE';
+const SET_WINNER = 'bcsdk/game/SET_WINNER';
 
 type SetSimulatingAction = {
   type: typeof SET_SIMULATING,
@@ -25,21 +26,29 @@ type PlayTimelineAction = {
   payload: boolean,
 };
 
+type SetWinnerAction = {
+  type: typeof SET_WINNER,
+  payload: Player,
+};
+
 type Action =
   | SetSimulatingAction
   | SetTimelineAction
-  | PlayTimelineAction;
+  | PlayTimelineAction
+  | SetWinnerAction;
 
 export type State = {|
   simulating: boolean,
   timeline: ?Timeline,
   play: boolean,
+  winner: ?Player,
 |};
 
 const initialState: State = {
   simulating: false,
   timeline: null,
   play: false,
+  winner: null,
 };
 
 function reducer(state: State = initialState, action: Action): State {
@@ -59,6 +68,11 @@ function reducer(state: State = initialState, action: Action): State {
         ...state,
         play: action.payload,
       };
+    case SET_WINNER:
+      return {
+        ...state,
+        winner: action.payload,
+      };
     default:
       return state;
   }
@@ -76,6 +90,11 @@ const setTimeline = (timeline: Timeline): SetTimelineAction => ({
   payload: timeline,
 });
 
+const setWinner = (winner: Player): SetWinnerAction => ({
+  type: SET_WINNER,
+  payload: winner,
+});
+
 const playTimeline = (play: boolean): PlayTimelineAction => ({
   type: SET_PLAY_TIMELINE,
   payload: play,
@@ -83,12 +102,13 @@ const playTimeline = (play: boolean): PlayTimelineAction => ({
 
 // thunks
 
-const simulate = (updatePlayer: UpdatePlayerFunction): ThunkAction<Action, State> => (dispatch) => {
+const simulate = (updatePlayer: string): ThunkAction<Action, State> => (dispatch) => {
   dispatch(setSimulating(true));
 
-  game.simulate(updatePlayer)
-    .then((timeline) => {
-      dispatch(setTimeline(timeline));
+  postSimulate(updatePlayer)
+    .then((result) => {
+      dispatch(setTimeline(result.timeline));
+      dispatch(setWinner(result.winner));
     }, (err) => {
       logger.error(err);
     })
@@ -103,6 +123,7 @@ const getState = (state: RootState): State => state.game;
 const getSimulating = (state: RootState): boolean => getState(state).simulating;
 const getTimeline = (state: RootState): ?Timeline => getState(state).timeline;
 const getTimelinePlay = (state: RootState): boolean => getState(state).play;
+const getWinner = (state: RootState): ?Player => getState(state).winner;
 
 export default reducer;
 export {
@@ -114,4 +135,5 @@ export {
   getSimulating,
   getTimeline,
   getTimelinePlay,
+  getWinner,
 };

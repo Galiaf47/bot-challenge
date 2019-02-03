@@ -6,10 +6,10 @@ import styled from '@emotion/styled';
 
 import {Button, Paper, Typography} from '@material-ui/core';
 
-import type {Timeline} from 'game/types';
-import {update, initialGameState} from 'game/game';
+import type {Timeline, Player} from 'data/types';
+import {update, initialGameState, getInitialGameState} from 'game/game';
 import settings from 'game/settings';
-import {getTimeline, getTimelinePlay} from 'game/reducer';
+import {getTimeline, getTimelinePlay, getWinner} from 'game/reducer';
 import BallDiv from './Ball';
 
 const PaperContainer = styled(Paper)`
@@ -21,10 +21,16 @@ type Props = {
   code: string,
   timeline: Timeline,
   timelinePlay: boolean,
-  classes: {[string]: string}
+  classes: {[string]: string},
+  winner: ?Player,
 };
 
-function DisplayPage({code, timeline, timelinePlay}: Props) {
+function DisplayPage({
+  code,
+  timeline,
+  timelinePlay,
+  winner,
+}: Props) {
   const [game, setGame] = useState(initialGameState);
   const [step, setStep] = useState(0);
   const [play, setPlay] = useState(false);
@@ -46,22 +52,23 @@ function DisplayPage({code, timeline, timelinePlay}: Props) {
     if (timelinePlay) {
       setStep(0);
     } else {
-      setGame(initialGameState);
+      setGame(getInitialGameState(20, 100));
     }
   });
 
-  const {ball, player} = game;
   const timeLeft = Math.round((settings.roundTime * settings.fps - step) / settings.fps);
 
   return (
     <PaperContainer>
-      <BallDiv entity={ball} color="gray" />
-      <BallDiv entity={player} color="green" />
+      {game.players.map(player => (
+        <BallDiv key={player.id} entity={player} color={(winner && winner.id === player.id) ? 'green' : 'grey'} />
+      ))}
       <Button onClick={handleRestart}>Restart</Button>
       <Button onClick={() => { setPlay(!play); }} autoFocus>{play ? 'Stop' : 'Play'}</Button>
       <Typography variant="title">
         {`Time left: ${timeLeft} seconds`}
       </Typography>
+      {game.players.length}
     </PaperContainer>
   );
 }
@@ -69,4 +76,5 @@ function DisplayPage({code, timeline, timelinePlay}: Props) {
 export default connect(state => ({
   timeline: getTimeline(state),
   timelinePlay: getTimelinePlay(state),
+  winner: getWinner(state),
 }))(DisplayPage);

@@ -1,131 +1,136 @@
 // @flow
 
 import Vector from 'victor';
+import _ from 'lodash';
 
+import type {
+  TimelineItem,
+  Timeline,
+} from 'data/types';
 import type {
   GameState,
   Player,
-  Ball,
   UpdatePlayerFunction,
 } from './types';
 import settings from './settings';
-
-const PLAYER_SIZE = settings.playerSize;
-const EDGE_DISTANCE = settings.playerSize / 2;
-const LEFT_EDGE = EDGE_DISTANCE;
-const RIGHT_EDGE = settings.fieldWidth - EDGE_DISTANCE;
-const TOP_EDGE = EDGE_DISTANCE;
-const BOTTOM_EDGE = settings.fieldHeight - EDGE_DISTANCE;
 
 const FPS = settings.fps;
 const TIME = settings.roundTime;
 const CICLES = FPS * TIME;
 
-const LEFT_EDGE_VECTOR = new Vector(1, 0);
-const RIGHT_EDGE_VECTOR = LEFT_EDGE_VECTOR.clone().invert();
-const TOP_EDGE_VECTOR = new Vector(0, 1);
-const BOTTOM_EDGE_VECTOR = TOP_EDGE_VECTOR.clone().invert();
+const getRandomPosition = () => (
+  new Vector(Math.round(Math.random() * settings.fieldWidth),
+    Math.round(Math.random() * settings.fieldHeight))
+);
 
-const initialGameState: GameState = {
-  ball: {
-    pos: new Vector(100, 200),
+const getInitialGameState = (cellsCount: number, snacksCount: number): GameState => ({
+  players: _.times(cellsCount, id => ({
+    id,
+    pos: getRandomPosition(),
     dir: new Vector(1, 0),
     velocity: 0,
-  },
-  player: {
-    pos: new Vector(200, 100),
-    dir: new Vector(1, 0),
-    velocity: 0,
-  },
-};
+    size: Math.round(Math.random() * 16) + 16,
+  })),
+  snacks: _.times(snacksCount, id => ({
+    id,
+    pos: getRandomPosition(),
+  })),
+});
 
-function checkCollision(ball, player) {
-  return ball.pos.distance(player.pos) <= PLAYER_SIZE;
+const initialGameState: GameState = getInitialGameState(10, 100);
+
+function checkCollision(currentCell, targetCell) {
+  return currentCell.pos.distance(targetCell.pos) <= Math.max(currentCell.size, targetCell.size);
 }
 
-function move(obj: Ball | Player) {
+function restrictEdges(pos, size) {
+  return new Vector(
+    Math.max(Math.min(pos.x, settings.fieldWidth - size), size),
+    Math.max(Math.min(pos.y, settings.fieldHeight - size), size),
+  );
+}
+
+function move(obj: Player) {
   const {dir} = obj;
-  const pos = obj.pos.clone().add(dir.clone().multiplyScalar(obj.velocity));
+  const velocity = obj.velocity - (obj.size * 0.01);
+  const pos = obj.pos.clone().add(dir.clone().multiplyScalar(velocity));
 
   return {
     ...obj,
-    pos,
-    velocity: obj.velocity * settings.ballFriction,
+    pos: restrictEdges(pos, obj.size),
+    velocity: velocity * settings.ballFriction,
   };
 }
 
-function getReflection(direction: Vector, normal: Vector) {
-  return direction.clone()
-    .add(
-      normal.clone()
-        .multiplyScalar(-2 * direction.dot(normal)),
-    );
+function getCollidedCells(targetCell: Player, cells: Player[]): Player[] {
+  return _.filter<Player>(cells, (cell: Player) => (cell.id !== targetCell.id
+    && checkCollision(cell, targetCell)
+  ));
 }
 
-function update(gameState: GameState, up: Function): GameState {
-  const {ball, player} = gameState;
-  const {dir} = ball;
-  let collisionForce;
+function mergeCells(cells: Player[]) {
+  return cells.reduce((result, cell) => {
+    const collidedCells: Player[] = _.sortBy(getCollidedCells(cell, cells), 'size');
 
-  if (checkCollision(ball, player)) {
-    const force = ball.pos.clone()
-      .subtract(player.pos)
-      .normalize()
-      .multiplyScalar(player.velocity);
+    if (_.isEmpty(collidedCells)) {
+      result.push(cell);
+    } else if (_.last(collidedCells).size < cell.size) {
+      result.push({
+        ...cell,
+        size: cell.size + _.sumBy(collidedCells, 'size'),
+      });
+    }
 
-    ball.dir = dir.clone().add(force).normalize();
-    ball.velocity = force.length() * 3;
-  }
+    return result;
+  }, []);
+}
 
-  if (ball.pos.x < LEFT_EDGE) {
-    collisionForce = getReflection(ball.dir, LEFT_EDGE_VECTOR);
-    ball.pos.x = LEFT_EDGE;
-  }
-  if (ball.pos.x > RIGHT_EDGE) {
-    collisionForce = getReflection(ball.dir, RIGHT_EDGE_VECTOR);
-    ball.pos.x = RIGHT_EDGE;
-  }
-  if (ball.pos.y < TOP_EDGE) {
-    collisionForce = getReflection(ball.dir, TOP_EDGE_VECTOR);
-    ball.pos.y = TOP_EDGE;
-  }
-  if (ball.pos.y > BOTTOM_EDGE) {
-    collisionForce = getReflection(ball.dir, BOTTOM_EDGE_VECTOR);
-    ball.pos.y = BOTTOM_EDGE;
-  }
-
-  if (collisionForce) {
-    ball.dir = collisionForce;
-  }
-
+function update(gameState: GameState, playerFunction: Function): GameState {
+  // TODO: try-catch for playerFuncion
   try {
+    const players = mergeCells(gameState.players.map(player => (
+      move(playerFunction(player, _.without(gameState.players, player)))
+    )));
+
     return {
       ...gameState,
-      ball: move(ball),
-      player: move(up(player, ball)),
+      players,
     };
   } catch (e) {
     return gameState;
   }
 }
 
-function simulate(updatePlayer: UpdatePlayerFunction): Promise<GameState[]> {
-  return new Promise<GameState[]>((resolve, reject) => {
-    let lastState: GameState = initialGameState;
+const stateToTimelineItem = (state: GameState): TimelineItem => ({
+  players: _.map(state.players, player => ({
+    id: player.id,
+    pos: player.pos.toObject(),
+    dir: player.dir.angle(),
+    size: player.size,
+  })),
+  snacks: _.map(state.snacks, snack => ({
+    id: snack.id,
+    pos: snack.pos.toObject(),
+  })),
+});
+
+function simulate(updatePlayer: UpdatePlayerFunction): Promise<Timeline> {
+  return new Promise<Timeline>((resolve, reject) => {
+    let lastState: GameState = getInitialGameState(40, 0);
     let cicle: number = 1;
-    const timeline: GameState[] = [lastState];
+    const timeline: Timeline = [stateToTimelineItem(lastState)];
 
     try {
       (function runCicle(): void {
         const end = Math.min(cicle + settings.simulationChunkSize, CICLES);
 
-        while (cicle < end) {
+        while (cicle < end && _.size(lastState.players) > 1) {
           lastState = update(lastState, updatePlayer);
           cicle += 1;
-          timeline.push(lastState);
+          timeline.push(stateToTimelineItem(lastState));
         }
 
-        if (cicle < CICLES) {
+        if (cicle < CICLES && _.size(lastState.players) > 1) {
           setTimeout(runCicle, 0);
         } else {
           resolve(timeline);
@@ -137,8 +142,16 @@ function simulate(updatePlayer: UpdatePlayerFunction): Promise<GameState[]> {
   });
 }
 
+// TODO: try-catch
+/* eslint-disable no-new-func */
+// $FlowFixMe
+const compile = (value: string) => Function(`"use strict";return (${value})`)();
+/* eslint-enable no-new-func */
+
 export {
   update,
   simulate,
+  compile,
   initialGameState,
+  getInitialGameState,
 };
