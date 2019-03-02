@@ -1,15 +1,18 @@
 // @flow
 
+
+export type Player = {
+  id: number,
+  pos: {
+    x: number,
+    y: number,
+  },
+  dir: number,
+  size: number,
+};
+
 export type TimelineItem = {
-  players: Array<{
-    id: number,
-    pos: {
-      x: number,
-      y: number,
-    },
-    dir: number,
-    size: number,
-  }>,
+  players: Player[],
   snacks: Array<{
     id: number,
     pos: {
@@ -20,8 +23,3 @@ export type TimelineItem = {
 };
 
 export type Timeline = TimelineItem[];
-
-export type Player = {
-  id: number,
-  size: number,
-};

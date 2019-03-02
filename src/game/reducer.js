@@ -95,9 +95,9 @@ const setWinner = (winner: Player): SetWinnerAction => ({
   payload: winner,
 });
 
-const playTimeline = (play: boolean): PlayTimelineAction => ({
+const playTimeline = (): PlayTimelineAction => ({
   type: SET_PLAY_TIMELINE,
-  payload: play,
+  payload: true,
 });
 
 // thunks

@@ -19,8 +19,8 @@ const TIME = settings.roundTime;
 const CICLES = FPS * TIME;
 
 const getRandomPosition = () => (
-  new Vector(Math.round(Math.random() * settings.fieldWidth),
-    Math.round(Math.random() * settings.fieldHeight))
+  new Vector(Math.round(Math.random() * settings.fieldSize),
+    Math.round(Math.random() * settings.fieldSize))
 );
 
 const getInitialGameState = (cellsCount: number, snacksCount: number): GameState => ({
@@ -45,8 +45,8 @@ function checkCollision(currentCell, targetCell) {
 
 function restrictEdges(pos, size) {
   return new Vector(
-    Math.max(Math.min(pos.x, settings.fieldWidth - size), size),
-    Math.max(Math.min(pos.y, settings.fieldHeight - size), size),
+    Math.max(Math.min(pos.x, settings.fieldSize - size), size),
+    Math.max(Math.min(pos.y, settings.fieldSize - size), size),
   );
 }
 
