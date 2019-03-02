@@ -12,7 +12,7 @@ const MIN_ZOOM = 1;
 const BACKGROUND_CENTER = '#fff';
 const BACKGROUND_EDGE = '#000';
 
-type CanvasPlayer = fabric.Circle;
+type CanvasCell = fabric.Circle;
 
 class Draw {
   canvas: fabric.Canvas;
@@ -23,7 +23,7 @@ class Draw {
 
   step: number = 0;
 
-  players: CanvasPlayer[] = [];
+  players: CanvasCell[] = [];
 
   constructor(id: string) {
     this.initCanvas(id);
@@ -86,14 +86,16 @@ class Draw {
     this.timeline = timeline;
     this.step = 0;
     this.players = _(timeline[0].players)
-      .map(player => new fabric.Circle({
-        id: player.id,
-        left: player.pos.x - player.size,
-        top: player.pos.y - player.size,
+      .map('cells')
+      .flatten()
+      .map(cell => new fabric.Circle({
+        id: cell.id,
+        left: cell.pos.x - cell.size,
+        top: cell.pos.y - cell.size,
         fill: '#ff3355',
-        radius: player.size,
+        radius: cell.size,
         stroke: '#dd2244',
-        strokeWidth: Math.round(player.size / 10),
+        strokeWidth: Math.round(cell.size / 10),
       }))
       .keyBy('id')
       .value();
@@ -104,6 +106,9 @@ class Draw {
     // TODO: possible double loop because of start()
     this.play && requestAnimationFrame(() => {
       this.step += 1;
+      if (this.step >= _.size(this.timeline) - 1) {
+        this.stop();
+      }
 
       this.update(this.timeline[this.step]);
       this.loop();
@@ -120,9 +125,13 @@ class Draw {
   }
 
   update(item: TimelineItem) {
-    const gamePlayers = _.keyBy(item.players, 'id');
     const deadPlayers = [];
     const alivePlayers = [];
+    const gamePlayers = _(item.players)
+      .map('cells')
+      .flatten()
+      .keyBy('id')
+      .value();
 
     _.forEach(this.players, (canvasPlayer) => {
       const gamePlayer = gamePlayers[canvasPlayer.id];

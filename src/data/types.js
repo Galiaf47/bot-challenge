@@ -1,14 +1,17 @@
 // @flow
 
-
-export type Player = {
-  id: number,
+type Cell = {
   pos: {
     x: number,
     y: number,
   },
   dir: number,
   size: number,
+};
+
+export type Player = {
+  id: number,
+  cells: Cell[],
 };
 
 export type TimelineItem = {

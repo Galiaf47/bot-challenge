@@ -10,6 +10,7 @@ import type {
 import type {
   GameState,
   Player,
+  DynamicEntity,
   UpdatePlayerFunction,
 } from './types';
 import settings from './settings';
@@ -26,10 +27,14 @@ const getRandomPosition = () => (
 const getInitialGameState = (cellsCount: number, snacksCount: number): GameState => ({
   players: _.times(cellsCount, id => ({
     id,
-    pos: getRandomPosition(),
-    dir: new Vector(1, 0),
-    velocity: 0,
-    size: Math.round(Math.random() * 16) + 16,
+    cells: [{
+      id,
+      parentId: id,
+      pos: getRandomPosition(),
+      dir: new Vector(1, 0),
+      velocity: 0,
+      size: Math.round(Math.random() * 16) + 16,
+    }],
   })),
   snacks: _.times(snacksCount, id => ({
     id,
@@ -50,27 +55,37 @@ function restrictEdges(pos, size) {
   );
 }
 
-function move(obj: Player) {
-  const {dir} = obj;
-  const velocity = obj.velocity - (obj.size * 0.01);
-  const pos = obj.pos.clone().add(dir.clone().multiplyScalar(velocity));
+function applyFunctionResult(player: Player): Player {
+  const {cells} = player;
 
   return {
-    ...obj,
-    pos: restrictEdges(pos, obj.size),
-    velocity: velocity * settings.ballFriction,
+    ...player,
+    cells: _.map(cells, (obj) => {
+      const {dir} = obj;
+      const velocity = obj.velocity - (obj.size * 0.01);
+      const pos = obj.pos.clone().add(dir.clone().multiplyScalar(velocity));
+
+      return ({
+        ...obj,
+        pos: restrictEdges(pos, obj.size),
+        velocity: velocity * settings.ballFriction,
+      });
+    }),
   };
 }
 
-function getCollidedCells(targetCell: Player, cells: Player[]): Player[] {
-  return _.filter<Player>(cells, (cell: Player) => (cell.id !== targetCell.id
+function getCollidedCells(targetCell: DynamicEntity, cells: DynamicEntity[]): DynamicEntity[] {
+  return _.filter<DynamicEntity>(cells, (cell: DynamicEntity) => (cell.id !== targetCell.id
     && checkCollision(cell, targetCell)
   ));
 }
 
-function mergeCells(cells: Player[]) {
-  return cells.reduce((result, cell) => {
-    const collidedCells: Player[] = _.sortBy(getCollidedCells(cell, cells), 'size');
+function mergeCells(players: Player[]): Player[] {
+  const allCells = _(players).map('cells').flatten().value();
+  const playersMap = _.keyBy(players, 'id');
+
+  const mergedCells = allCells.reduce((result, cell: DynamicEntity) => {
+    const collidedCells: DynamicEntity[] = _.sortBy(getCollidedCells(cell, allCells), 'size');
 
     if (_.isEmpty(collidedCells)) {
       result.push(cell);
@@ -83,14 +98,27 @@ function mergeCells(cells: Player[]) {
 
     return result;
   }, []);
+
+  return _(mergedCells)
+    .groupBy('parentId')
+    .map((cells, id) => ({
+      ...playersMap[id],
+      cells,
+    }))
+    .value();
 }
 
 function update(gameState: GameState, playerFunction: Function): GameState {
   // TODO: try-catch for playerFuncion
   try {
-    const players = mergeCells(gameState.players.map(player => (
-      move(playerFunction(player, _.without(gameState.players, player)))
-    )));
+    const updatedPlayers: Player[] = gameState.players.map(player => (
+      applyFunctionResult(playerFunction(player, _(gameState.players)
+        .without(player)
+        .map('cells')
+        .flatten()
+        .value()))
+    ));
+    const players = mergeCells(updatedPlayers);
 
     return {
       ...gameState,
@@ -104,9 +132,12 @@ function update(gameState: GameState, playerFunction: Function): GameState {
 const stateToTimelineItem = (state: GameState): TimelineItem => ({
   players: _.map(state.players, player => ({
     id: player.id,
-    pos: player.pos.toObject(),
-    dir: player.dir.angle(),
-    size: player.size,
+    cells: _.map(player.cells, cell => ({
+      id: cell.id,
+      pos: cell.pos.toObject(),
+      dir: cell.dir.angle(),
+      size: cell.size,
+    })),
   })),
   snacks: _.map(state.snacks, snack => ({
     id: snack.id,

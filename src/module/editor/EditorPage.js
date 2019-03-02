@@ -23,23 +23,35 @@ import type {UpdatePlayerFunction} from 'game/types';
 
 const defaultValue = `
 function updatePlayer(player, enemies) {
-  let dir = player.dir;
-  let velocity;
-
-  const closest = enemies.sort((e1, e2) => (e1.pos.distance(player.pos) - e2.pos.distance(player.pos)))[0];
-
-  if(closest.size < player.size) {
-    dir = closest.pos.clone().subtract(player.pos).normalize();
-    velocity = 5;
-  } else {
-    dir = closest.pos.clone().subtract(player.pos).invert().normalize();
-    velocity = 3;
-  }
+  let split = false;
 
   return {
     ...player,
-    dir,
-    velocity,
+    cells: player.cells ? player.cells.map(cell => {
+      let dir = cell.dir;
+      let velocity;
+
+      const closest = enemies.sort((e1, e2) => (e1.pos.distance(cell.pos) - e2.pos.distance(cell.pos)))[0];
+
+      if(closest.size < cell.size) {
+        const distance = closest.pos.distance(cell.pos);
+        dir = closest.pos.clone().subtract(cell.pos).normalize();
+        velocity = 3;
+        if (distance < 10) {
+          split = true;
+        }
+      } else {
+        dir = closest.pos.clone().subtract(cell.pos).invert().normalize();
+        velocity = 5;
+      }
+
+      return {
+        ...cell,
+        dir,
+        velocity,
+      };
+    }) : player.cells,
+    split,
   };
 }
 `;

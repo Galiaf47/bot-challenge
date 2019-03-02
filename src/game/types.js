@@ -4,13 +4,17 @@ import Victor from 'victor';
 
 export type DynamicEntity = {|
   id: number,
+  parentId: number,
   pos: Victor,
   dir: Victor,
   velocity: number,
   size: number,
 |};
 
-export type Player = DynamicEntity;
+export type Player = {
+  id: number,
+  cells: DynamicEntity[],
+};
 
 export type Snack = {
   id: number,
