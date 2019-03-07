@@ -3,17 +3,25 @@
 import Victor from 'victor';
 
 export type DynamicEntity = {|
-  id: number,
-  parentId: number,
   pos: Victor,
   dir: Victor,
   velocity: number,
   size: number,
 |};
 
+export type Cell = {
+  id: number,
+  parentId: number,
+  charge: number,
+  split: number,
+  ...DynamicEntity
+};
+
 export type Player = {
   id: number,
-  cells: DynamicEntity[],
+  cells: Cell[],
+  split: boolean,
+  color: string,
 };
 
 export type Snack = {

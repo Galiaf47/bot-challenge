@@ -37,13 +37,15 @@ function updatePlayer(player, enemies) {
         const distance = closest.pos.distance(cell.pos);
         dir = closest.pos.clone().subtract(cell.pos).normalize();
         velocity = 3;
-        if (distance < 10) {
+        if (distance < cell.size * 4) {
           split = true;
         }
       } else {
         dir = closest.pos.clone().subtract(cell.pos).invert().normalize();
         velocity = 5;
       }
+
+      if (cell.charge) velocity = 10;
 
       return {
         ...cell,

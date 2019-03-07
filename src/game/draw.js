@@ -14,6 +14,18 @@ const BACKGROUND_EDGE = '#000';
 
 type CanvasCell = fabric.Circle;
 
+function createCell(cell) {
+  return new fabric.Circle({
+    id: cell.id,
+    left: cell.pos.x - cell.size,
+    top: cell.pos.y - cell.size,
+    fill: cell.color,
+    radius: cell.size,
+    stroke: '#dd2244',
+    strokeWidth: Math.round(cell.size / 10),
+  });
+}
+
 class Draw {
   canvas: fabric.Canvas;
 
@@ -23,7 +35,7 @@ class Draw {
 
   step: number = 0;
 
-  players: CanvasCell[] = [];
+  players: {[string]: CanvasCell} = {};
 
   constructor(id: string) {
     this.initCanvas(id);
@@ -88,15 +100,7 @@ class Draw {
     this.players = _(timeline[0].players)
       .map('cells')
       .flatten()
-      .map(cell => new fabric.Circle({
-        id: cell.id,
-        left: cell.pos.x - cell.size,
-        top: cell.pos.y - cell.size,
-        fill: '#ff3355',
-        radius: cell.size,
-        stroke: '#dd2244',
-        strokeWidth: Math.round(cell.size / 10),
-      }))
+      .map(cell => createCell(cell))
       .keyBy('id')
       .value();
     this.canvas && this.canvas.add(..._.values(this.players));
@@ -132,6 +136,14 @@ class Draw {
       .flatten()
       .keyBy('id')
       .value();
+    const newCellsIds = _.difference(_.keys(gamePlayers), _.keys(this.players));
+    const newCells = _.map(newCellsIds, id => createCell(gamePlayers[id]));
+    this.canvas.add(...newCells);
+
+    this.players = {
+      ...this.players,
+      ..._.keyBy(newCells, 'id'),
+    };
 
     _.forEach(this.players, (canvasPlayer) => {
       const gamePlayer = gamePlayers[canvasPlayer.id];
