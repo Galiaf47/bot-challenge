@@ -59,14 +59,6 @@ const getInitialGameState = (cellsCount: number, snacksCount: number): GameState
 
 const initialGameState: GameState = getInitialGameState(10, 100);
 
-function checkCollision(currentCell: Cell, targetCell: Cell): boolean {
-  if (currentCell.parentId === targetCell.parentId && (currentCell.split || targetCell.split)) {
-    return false;
-  }
-
-  return currentCell.pos.distance(targetCell.pos) <= Math.max(currentCell.size, targetCell.size);
-}
-
 function restrictEdges(pos, size) {
   return new Vector(
     Math.max(Math.min(pos.x, settings.fieldSize - size), size),
@@ -122,38 +114,55 @@ function applyFunctionResult(player: Player): Player {
   };
 }
 
-function getCollidedCells(targetCell: Cell, cells: Cell[]): Cell[] {
-  return _.filter<Cell>(cells, (cell: Cell) => (cell.id !== targetCell.id
-    && checkCollision(cell, targetCell)
-  ));
+function checkCollision(currentCell: Cell, targetCell: Cell): boolean {
+  return currentCell.pos.distance(targetCell.pos) <= Math.max(currentCell.size, targetCell.size);
 }
+
+function isMergeableSibling(current: Cell, target: Cell): boolean {
+  return current.parentId === target.parentId && !current.split && !target.split;
+}
+
+export const getMergedCells = (cells: Cell[]): Cell[] => cells.reduce((result, cell: Cell) => {
+  _.forEach(cells, (target) => {
+    if (cell.id === target.id || !cell.size) {
+      return;
+    }
+
+    if (
+      checkCollision(cell, target)
+      && (
+        cell.size > target.size
+        || isMergeableSibling(cell, target)
+      )) {
+      /* eslint-disable no-param-reassign */
+      cell.size += target.size;
+      target.size = 0;
+      /* eslint-enable no-param-reassign */
+    }
+  });
+
+  cell.size && result.push(cell);
+
+  return result;
+}, []);
+
+const cellsToPlayers = (players: Player[], cells: Cell[]) => {
+  const playersMap = _.keyBy(players, 'id');
+
+  return _(cells)
+    .groupBy('parentId')
+    .map((cellsGroup, id) => ({
+      ...playersMap[id],
+      cells: cellsGroup,
+    }))
+    .value();
+};
 
 function mergeCells(players: Player[]): Player[] {
   const allCells = _(players).map('cells').flatten().value();
-  const playersMap = _.keyBy(players, 'id');
+  const mergedCells = getMergedCells(allCells);
 
-  const mergedCells = allCells.reduce((result, cell: Cell) => {
-    const collidedCells: Cell[] = _.sortBy(getCollidedCells(cell, allCells), 'size');
-
-    if (_.isEmpty(collidedCells)) {
-      result.push(cell);
-    } else if (_.last(collidedCells).size < cell.size) {
-      result.push({
-        ...cell,
-        size: cell.size + _.sumBy(collidedCells, 'size'),
-      });
-    }
-
-    return result;
-  }, []);
-
-  return _(mergedCells)
-    .groupBy('parentId')
-    .map((cells, id) => ({
-      ...playersMap[id],
-      cells,
-    }))
-    .value();
+  return cellsToPlayers(players, mergedCells);
 }
 
 const getEnemies = (players: Player[], player: Player): DynamicEntity[] => _(players)
