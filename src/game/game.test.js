@@ -4,6 +4,7 @@ import Vector from 'victor';
 import _ from 'lodash';
 
 import {getMergedCells} from './game';
+import {type Cell} from './types';
 
 let id = 0;
 
@@ -12,11 +13,15 @@ const getId = () => {
   return id;
 };
 
-const createCell = (cell?: {}) => ({
+const createCell = (cell?: {}): Cell => ({
   id: getId(),
   pos: new Vector(2, 2),
+  dir: new Vector(1, 0),
+  velocity: 0,
   size: 2,
   parentId: 1,
+  charge: 0,
+  split: 0,
   ...cell,
 });
 

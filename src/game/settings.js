@@ -6,8 +6,8 @@ const settings = {
   fieldSize: 5000,
   borderSize: 10,
   ballFriction: 0.95,
-  fps: 20,
-  roundTime: 60 * 5, // sec
+  fps: 60,
+  roundTime: 10 * 60 * 5, // sec
   simulationChunkSize: 100,
 };
 

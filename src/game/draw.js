@@ -1,33 +1,35 @@
 // @flow
 
-import {fabric} from 'fabric';
+import {
+  Application, Graphics,
+  TilingSprite, Loader,
+} from 'pixi.js';
 import _ from 'lodash';
 
-import type {Timeline, TimelineItem} from 'data/types';
+import type {Timeline, TimelineItem, TimelineCell} from 'data/types';
 import settings from './settings';
 
+import background from './paper.jpg';
+
 const MAX_ZOOM = settings.windowSize / settings.fieldSize;
-const MIN_ZOOM = 1;
 
-const BACKGROUND_CENTER = '#fff';
-const BACKGROUND_EDGE = '#000';
-
-type CanvasCell = fabric.Circle;
+type CanvasCell = Graphics;
 
 function createCell(cell) {
-  return new fabric.Circle({
-    id: cell.id,
-    left: cell.pos.x - cell.size,
-    top: cell.pos.y - cell.size,
-    fill: cell.color,
-    radius: cell.size,
-    stroke: '#dd2244',
-    strokeWidth: Math.round(cell.size / 10),
-  });
+  const circle = new Graphics();
+  circle.beginFill(parseInt(cell.color.replace(/^#/, ''), 16));
+  circle.drawCircle(0, 0, 1);
+  circle.endFill();
+  circle.x = cell.pos.x;
+  circle.y = cell.pos.y;
+  circle.scale.set(cell.size);
+  circle.id = cell.id;
+
+  return circle;
 }
 
 class Draw {
-  canvas: fabric.Canvas;
+  app: Application;
 
   play: boolean = false;
 
@@ -35,75 +37,59 @@ class Draw {
 
   step: number = 0;
 
-  players: {[string]: CanvasCell} = {};
+  cells: {[string]: CanvasCell} = {};
 
-  constructor(id: string) {
+  followId: ?string;
+
+  onReady: () => void;
+
+  onUpdate: (step: number) => void;
+
+  constructor(id: string, onReady: () => void) {
     this.initCanvas(id);
-    this.drawBorder();
-    this.setZoomEvents();
+    this.onReady = onReady;
   }
 
   initCanvas(id: string) {
-    this.canvas = new fabric.Canvas(id);
-    this.canvas.setDimensions({
-      width: settings.windowSize + settings.borderSize,
-      height: settings.windowSize + settings.borderSize,
+    this.app = new Application({
+      view: document.getElementById(id),
+      width: settings.windowSize,
+      height: settings.windowSize,
+      antialias: true,
+      autoStart: false,
     });
-    this.canvas.setZoom(MAX_ZOOM);
+
+    Loader.shared
+      .add(background)
+      .load(this.setup);
   }
 
-  setZoomEvents() {
-    this.canvas.on('mouse:wheel', (opt) => {
-      const delta = opt.e.deltaY;
-      let zoom = this.canvas.getZoom();
+  setup = (loader: any, resources: {[string]: any}) => {
+    const {texture} = resources[background];
+    const tilingSprite = new TilingSprite(texture, settings.fieldSize, settings.fieldSize);
+    this.app.stage.addChild(tilingSprite);
+    this.app.render();
 
-      zoom += delta / 200;
-      if (zoom > MIN_ZOOM) zoom = MIN_ZOOM;
-      if (zoom < MAX_ZOOM) zoom = MAX_ZOOM;
-      this.canvas.setZoom(zoom);
-
-      opt.e.preventDefault();
-      opt.e.stopPropagation();
-    });
+    this.onReady();
   }
 
-  drawBorder() {
-    const border = new fabric.Rect({
-      width: settings.fieldSize,
-      height: settings.fieldSize,
-      stroke: 'red',
-      strokeWidth: 10,
-    });
-    border.setGradient('fill', {
-      type: 'radial',
-      r1: border.width * 2,
-      r2: 100,
-      x1: border.width / 2,
-      y1: border.height / 2,
-      x2: border.width / 2,
-      y2: border.height / 2,
-      colorStops: {
-        // $FlowFixMe
-        0: BACKGROUND_EDGE,
-        // $FlowFixMe
-        1: BACKGROUND_CENTER,
-      },
-    });
-    this.canvas.add(border);
+  clearScene() {
+    this.app.stage.removeChildren();
   }
 
   setTimeline(timeline: Timeline) {
-    !_.isEmpty(this.players) && this.canvas.remove(..._.values(this.players));
+    !_.isEmpty(this.cells) && this.clearScene();
 
     this.timeline = timeline;
     this.step = 0;
-    this.players = _(timeline[0].players)
+
+    this.cells = _(timeline[0].players)
       .map('cells')
       .flatten()
       .map(cell => createCell(cell))
       .keyBy('id')
       .value();
-    this.canvas && this.canvas.add(..._.values(this.players));
+    this.app.stage.addChild(..._.values(this.cells));
   }
 
   loop() {
@@ -128,43 +114,69 @@ class Draw {
     this.play = false;
   }
 
+  setFollow(id: ?string) {
+    this.followId = id;
+  }
+
   update(item: TimelineItem) {
     const deadPlayers = [];
     const alivePlayers = [];
-    const gamePlayers = _(item.players)
+    const timelinePlayersById = _.keyBy(item.players, 'id');
+    const gameCells = _(item.players)
       .map('cells')
       .flatten()
       .keyBy('id')
       .value();
-    const newCellsIds = _.difference(_.keys(gamePlayers), _.keys(this.players));
-    const newCells = _.map(newCellsIds, id => createCell(gamePlayers[id]));
-    this.canvas.add(...newCells);
+    const newCellsIds = _.difference(_.keys(gameCells), _.keys(this.cells));
+    const newCells = _.map(newCellsIds, id => createCell(gameCells[id]));
+    _.isEmpty(newCells) || this.app.stage.addChild(...newCells);
 
-    this.players = {
-      ...this.players,
+    this.cells = {
+      ...this.cells,
       ..._.keyBy(newCells, 'id'),
     };
 
-    _.forEach(this.players, (canvasPlayer) => {
-      const gamePlayer = gamePlayers[canvasPlayer.id];
+    _.forEach(this.cells, (canvasCell) => {
+      const gameCell = gameCells[canvasCell.id];
 
-      if (gamePlayer) {
-        canvasPlayer.set({
-          left: gamePlayer.pos.x - gamePlayer.size,
-          top: gamePlayer.pos.y - gamePlayer.size,
-          radius: gamePlayer.size,
-        });
-        canvasPlayer.moveTo(gamePlayer.size);
-        canvasPlayer.setCoords();
-        alivePlayers.push(canvasPlayer.id);
+      if (gameCell) {
+        /* eslint-disable no-param-reassign */
+        canvasCell.x = gameCell.pos.x;
+        canvasCell.y = gameCell.pos.y;
+        /* eslint-enable no-param-reassign */
+        canvasCell.scale.set(gameCell.size);
+
+        alivePlayers.push(canvasCell.id);
       } else {
-        deadPlayers.push(canvasPlayer.id);
+        deadPlayers.push(canvasCell.id);
       }
     });
 
-    this.canvas.remove(..._(this.players).pick(deadPlayers).values().value());
-    this.players = _.pick(this.players, alivePlayers);
-    this.canvas.renderAll();
+    this.app.stage.removeChild(..._(this.cells).pick(deadPlayers).values().value());
+    this.cells = _.pick(this.cells, alivePlayers);
+
+    if (this.followId && timelinePlayersById[this.followId]) {
+      this.viewportTo(timelinePlayersById[this.followId].cells[0]);
+    } else {
+      this.viewportTo(null);
+    }
+
+    this.app.render();
+    this.onUpdate && (this.step % settings.fps === 0) && this.onUpdate(this.step);
+  }
+
+  viewportTo(cell: ?TimelineCell) {
+    if (cell) {
+      const scale = Math.max(settings.windowSize / (cell.size * 2 * 20), MAX_ZOOM);
+
+      this.app.stage.scale.set(scale);
+      this.app.stage.x = -cell.pos.x * scale + settings.windowSize / 2;
+      this.app.stage.y = -cell.pos.y * scale + settings.windowSize / 2;
+    } else {
+      this.app.stage.scale.set(MAX_ZOOM);
+      this.app.stage.x = 0;
+      this.app.stage.y = 0;
+    }
   }
 }
 
