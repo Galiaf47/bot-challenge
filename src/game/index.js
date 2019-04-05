@@ -6,7 +6,7 @@ import _ from 'lodash';
 import type {
   TimelineItem,
   Timeline,
-} from 'data/types';
+} from './types';
 import type {
   GameState,
   Player,
@@ -14,7 +14,7 @@ import type {
   Cell,
   UpdatePlayerFunction,
 } from './types';
-import settings from './settings';
+import settings from '../settings';
 
 const FPS = settings.fps;
 const TIME = settings.roundTime;

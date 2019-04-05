@@ -7,7 +7,7 @@ import {
 import _ from 'lodash';
 
 import type {Timeline, TimelineItem, TimelineCell} from 'data/types';
-import settings from './settings';
+import settings from '../settings';
 
 import background from './paper.jpg';
 

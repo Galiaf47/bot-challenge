@@ -5,7 +5,7 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import _ from 'lodash';
 
-import {simulate, compile} from '../src/game/game';
+import {simulate, compile} from '../src/game';
 
 const app = express();
 const port = 3001;
