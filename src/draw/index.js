@@ -6,7 +6,7 @@ import {
 } from 'pixi.js';
 import _ from 'lodash';
 
-import type {Timeline, TimelineItem, TimelineCell} from 'data/types';
+import type {Timeline, TimelineItem, TimelineCell} from 'game/types';
 import settings from '../settings';
 
 import background from './paper.jpg';
@@ -17,7 +17,8 @@ type CanvasCell = Graphics;
 
 function createCell(cell) {
   const circle = new Graphics();
-  circle.beginFill(parseInt(cell.color.replace(/^#/, ''), 16));
+  // circle.beginFill(parseInt(cell.color.replace(/^#/, ''), 16));
+  circle.beginFill(0x005500);
   circle.drawCircle(0, 0, 1);
   circle.endFill();
   circle.x = cell.pos.x;
@@ -68,6 +69,7 @@ class Draw {
     const {texture} = resources[background];
     const tilingSprite = new TilingSprite(texture, settings.fieldSize, settings.fieldSize);
     this.app.stage.addChild(tilingSprite);
+    this.app.stage.setChildIndex(tilingSprite, 0);
     this.app.render();
 
     this.onReady();
@@ -89,6 +91,7 @@ class Draw {
       .map(cell => createCell(cell))
       .keyBy('id')
       .value();
+
     this.app.stage.addChild(..._.values(this.cells));
   }
 

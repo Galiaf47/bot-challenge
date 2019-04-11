@@ -4,15 +4,12 @@ import Vector from 'victor';
 import _ from 'lodash';
 
 import type {
-  TimelineItem,
-  Timeline,
-} from './types';
-import type {
   GameState,
   Player,
-  DynamicEntity,
   Cell,
   UpdatePlayerFunction,
+  TimelineItem,
+  Timeline,
 } from './types';
 import settings from '../settings';
 
@@ -165,7 +162,7 @@ function mergeCells(players: Player[]): Player[] {
   return cellsToPlayers(players, mergedCells);
 }
 
-const getEnemies = (players: Player[], player: Player): DynamicEntity[] => _(players)
+const getEnemies = (players: Player[], player: Player): Cell[] => _(players)
   .without(player)
   .map('cells')
   .flatten()
@@ -175,7 +172,7 @@ function update(gameState: GameState, playerFunction: Function): GameState {
   // TODO: try-catch for playerFuncion
   try {
     const updatedPlayers: Player[] = gameState.players.map(player => (
-      applyFunctionResult(playerFunction(player, getEnemies(gameState.players, player)))
+      applyFunctionResult(playerFunction[player.id](player, getEnemies(gameState.players, player)))
     ));
     const players = mergeCells(updatedPlayers);
 
@@ -193,44 +190,31 @@ const stateToTimelineItem = (state: GameState): TimelineItem => ({
     id: player.id,
     cells: _.map(player.cells, cell => ({
       id: cell.id,
-      pos: cell.pos.toObject(),
-      dir: cell.dir.angle(),
+      pos: {
+        x: Math.round(cell.pos.x),
+        y: Math.round(cell.pos.y),
+      },
       size: cell.size,
-      color: player.color,
     })),
   })),
   snacks: _.map(state.snacks, snack => ({
-    id: snack.id,
-    pos: snack.pos.toObject(),
+    x: Math.round(snack.pos.x),
+    y: Math.round(snack.pos.y),
   })),
 });
 
-function simulate(updatePlayer: UpdatePlayerFunction): Promise<Timeline> {
-  return new Promise<Timeline>((resolve, reject) => {
-    let lastState: GameState = getInitialGameState(40, 0);
-    let cicle: number = 1;
-    const timeline: Timeline = [stateToTimelineItem(lastState)];
+function simulate(updatePlayer: {[number]: UpdatePlayerFunction}): Timeline {
+  let lastState: GameState = getInitialGameState(_.size(updatePlayer), 0);
+  let cicle: number = 1;
+  const timeline: Timeline = [stateToTimelineItem(lastState)];
 
-    try {
-      (function runCicle(): void {
-        const end = Math.min(cicle + settings.simulationChunkSize, CICLES);
+  while (cicle < CICLES && _.size(lastState.players) > 1) {
+    lastState = update(lastState, updatePlayer);
+    cicle += 1;
+    timeline.push(stateToTimelineItem(lastState));
+  }
 
-        while (cicle < end && _.size(lastState.players) > 1) {
-          lastState = update(lastState, updatePlayer);
-          cicle += 1;
-          timeline.push(stateToTimelineItem(lastState));
-        }
-
-        if (cicle < CICLES && _.size(lastState.players) > 1) {
-          setTimeout(runCicle, 0);
-        } else {
-          resolve(timeline);
-        }
-      }());
-    } catch (e) {
-      reject(e);
-    }
-  });
+  return timeline;
 }
 
 // TODO: try-catch

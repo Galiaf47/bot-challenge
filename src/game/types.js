@@ -2,30 +2,53 @@
 
 import Victor from 'victor';
 
-export type DynamicEntity = {|
+export type Id = number;
+
+export type TimelineCell = {
+  pos: {
+    x: number,
+    y: number,
+  },
+  size: number,
+};
+
+export type TimelinePlayer = {
+  id: Id,
+  cells: TimelineCell[],
+};
+
+export type TimelineSnack = {
+  x: number,
+  y: number,
+};
+
+export type TimelineItem = {
+  players: TimelinePlayer[],
+  snacks: TimelineSnack[],
+};
+
+export type Timeline = TimelineItem[];
+
+export type Cell = {
+  id: Id,
+  parentId: Id,
   pos: Victor,
   dir: Victor,
   velocity: number,
   size: number,
-|};
-
-export type Cell = {
-  id: number,
-  parentId: number,
   charge: number,
   split: number,
-  ...DynamicEntity
 };
 
 export type Player = {
-  id: number,
+  id: Id,
   cells: Cell[],
   split: boolean,
   color: string,
 };
 
 export type Snack = {
-  id: number,
+  id: Id,
   pos: Victor,
 };
 
@@ -36,4 +59,4 @@ export type Game = {|
 
 export type GameState = Game;
 
-export type UpdatePlayerFunction = (Player, enemies: Player[], snacks: Snack[]) => Player;
+export type UpdatePlayerFunction = (player: Player, enemies: Cell[], snacks: Snack[]) => Player;

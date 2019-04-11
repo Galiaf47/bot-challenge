@@ -7,7 +7,7 @@ const settings = {
   borderSize: 10,
   ballFriction: 0.95,
   fps: 60,
-  roundTime: 10 * 60 * 5, // sec
+  roundTime: 60, // sec
   simulationChunkSize: 100,
 };
 

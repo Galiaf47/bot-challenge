@@ -2,7 +2,7 @@
   "name": "bot-challenge",
   "version": "0.1.0",
   "private": true,
-  "main": "./dist/bot-challenge.js",
+  "main": "./lib/main.js",
   "module": "./src/index.js",
   "dependencies": {
     "body-parser": "^1.18.3",
@@ -17,7 +17,6 @@
   "scripts": {
     "build": "webpack",
     "start": "webpack-dev-server --open",
-    "server:run": "nodemon --exec babel-node --presets=@babel/preset-env,@babel/preset-flow -- server",
     "eslint": "eslint src/",
     "flow": "flow"
   },

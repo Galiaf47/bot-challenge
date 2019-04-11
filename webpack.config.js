@@ -1,27 +1,49 @@
 const path = require('path');
 
-module.exports = {
+const moduleConfig = {
+  rules: [
+    {test: /\.js$/, exclude: /node_modules/, loader: 'babel-loader'},
+    {
+      test: /\.(png|svg|jpg|gif)$/,
+      use: [
+        'file-loader',
+      ],
+    },
+  ],
+};
+
+const config = {
   mode: 'development',
-  entry: './src/index.js',
+  entry: {
+    main: './src/index.js',
+  },
   devtool: 'inline-source-map',
   devServer: {
-    contentBase: './dist'
+    contentBase: './lib',
   },
+  target: 'web',
   output: {
-    path: path.resolve(__dirname, 'dist'),
-    filename: 'bot-challenge.js',
-    library: 'botChallenge',
+    path: path.resolve(__dirname, 'lib'),
+    filename: '[name].js',
+    library: ['botChallenge'],
     libraryTarget: 'umd',
   },
-  module: {
-    rules: [
-      { test: /\.js$/, exclude: /node_modules/, loader: 'babel-loader' },
-      {
-        test: /\.(png|svg|jpg|gif)$/,
-        use: [
-          'file-loader'
-        ]
-      }
-    ],
-  },
+  module: moduleConfig,
 };
+
+const cliConfig = {
+  mode: 'production',
+  entry: {
+    cli: './src/cli/index.js',
+  },
+  target: 'node',
+  output: {
+    path: path.resolve(__dirname, 'lib'),
+    filename: '[name].js',
+    library: ['botChallenge', '[name]'],
+    libraryTarget: 'umd',
+  },
+  module: moduleConfig,
+};
+
+module.exports = [config, cliConfig];

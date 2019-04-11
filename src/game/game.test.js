@@ -3,7 +3,7 @@
 import Vector from 'victor';
 import _ from 'lodash';
 
-import {getMergedCells} from './game';
+import {getMergedCells} from './index';
 import {type Cell} from './types';
 
 let id = 0;
