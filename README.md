@@ -3,12 +3,15 @@
 
 ## Install for web
 ```
-yarn add git@github.com:Galiaf47/bot-challenge.git
+npm install -S bot-challenge
 ```
 
 ## Install and run CLI
+### Install
 ```
-npm install git@github.com:Galiaf47/bot-challenge.git
-//TODO:
-node node_modules/bot-challenge/lib/cli.js 121=bot.js 123=bot.js 125=bot.js 127=bot.js 129=bot.js
+npm install bot-challenge
+```
+### Run
+```
+node node_modules/bot-challenge/lib/cli.js id=path/to/bot.js id2=path/to/bot2.js > game.json
 ```
