@@ -19,8 +19,7 @@
   "scripts": {
     "build": "webpack",
     "start": "webpack-dev-server --open",
-    "prepack": "npm run prepack:build && npm run prepack:flow",
-    "prepack:build": "npm run webpack",
+    "prepack": "npm run build && npm run prepack:flow",
     "prepack:flow": "flow-copy-source src lib",
     "eslint": "eslint src/",
     "flow": "flow"
