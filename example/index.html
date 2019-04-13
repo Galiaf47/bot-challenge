@@ -1,0 +1,57 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Getting Started</title>
+    <script src="main.js"></script>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+
+    <textarea rows="15" style="width: 600px;"></textarea>
+    <button></button>
+    <script>
+      const botFunction = botChallenge.compile(`
+function updatePlayer(player, enemies) {
+  let split = false;
+
+  return {
+    ...player,
+    cells: player.cells ? player.cells.map(cell => {
+      let dir = cell.dir;
+      let velocity;
+
+      const closest = enemies.sort((e1, e2) => (e1.pos.distance(cell.pos) - e2.pos.distance(cell.pos)))[0];
+
+      if(closest.size < cell.size) {
+        const distance = closest.pos.distance(cell.pos);
+        dir = closest.pos.clone().subtract(cell.pos).normalize();
+        velocity = 3;
+        if (distance < cell.size * 4) {
+          split = true;
+        }
+      } else {
+        dir = closest.pos.clone().subtract(cell.pos).invert().normalize();
+        velocity = 5;
+      }
+
+      if (cell.charge) velocity = 10;
+
+      return {
+        ...cell,
+        dir,
+        velocity,
+      };
+    }) : player.cells,
+    split,
+  };
+}
+      `);
+      const draw = new botChallenge.Draw({canvasId: 'canvas', onReady: () => {}, backgroundUrl: 'paper.jpg'});
+      const timeline = botChallenge.simulate({121: botFunction, 123: botFunction, 125: botFunction, 127: botFunction});
+
+      draw.setTimeline(timeline);
+      // draw.setFollow(121);
+      draw.start();
+    </script>
+  </body>
+</html>

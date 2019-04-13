@@ -2,16 +2,21 @@
 
 import {
   Application, Graphics,
-  TilingSprite, Loader,
+  TilingSprite, Loader, Texture,
 } from 'pixi.js';
 import _ from 'lodash';
 
 import type {Timeline, TimelineItem, TimelineCell} from 'game/types';
 import settings from '../settings';
 
-import background from './paper.jpg';
 
 const MAX_ZOOM = settings.windowSize / settings.fieldSize;
+
+type DrawOptions = {
+  canvasId: string,
+  backgroundUrl: string,
+  onReady: () => void,
+};
 
 type CanvasCell = Graphics;
 
@@ -32,6 +37,8 @@ function createCell(cell) {
 class Draw {
   app: Application;
 
+  loader: Loader;
+
   play: boolean = false;
 
   timeline: Timeline = [];
@@ -42,13 +49,16 @@ class Draw {
 
   followId: ?string;
 
+  backgroundUrl: ?string;
+
   onReady: () => void;
 
   onUpdate: (step: number) => void;
 
-  constructor(id: string, onReady: () => void) {
-    this.initCanvas(id);
+  constructor({canvasId, onReady, backgroundUrl}: DrawOptions) {
     this.onReady = onReady;
+    this.backgroundUrl = backgroundUrl;
+    this.initCanvas(canvasId);
   }
 
   initCanvas(id: string) {
@@ -60,19 +70,24 @@ class Draw {
       autoStart: false,
     });
 
-    Loader.shared
-      .add(background)
-      .load(this.setup);
+    this.loader = Loader.shared;
+    this.backgroundUrl && this.loader.add(this.backgroundUrl);
+    this.loader.load(this.setup);
   }
 
   setup = (loader: any, resources: {[string]: any}) => {
-    const {texture} = resources[background];
-    const tilingSprite = new TilingSprite(texture, settings.fieldSize, settings.fieldSize);
-    this.app.stage.addChild(tilingSprite);
-    this.app.stage.setChildIndex(tilingSprite, 0);
+    if (this.backgroundUrl && resources[this.backgroundUrl]) {
+      this.setBackground(resources[this.backgroundUrl].texture);
+    }
     this.app.render();
 
     this.onReady();
+  }
+
+  setBackground(texture: Texture) {
+    const tilingSprite = new TilingSprite(texture, settings.fieldSize, settings.fieldSize);
+    this.app.stage.addChild(tilingSprite);
+    this.app.stage.setChildIndex(tilingSprite, 0);
   }
 
   clearScene() {

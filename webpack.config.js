@@ -19,7 +19,7 @@ const config = {
   },
   devtool: 'inline-source-map',
   devServer: {
-    contentBase: './lib',
+    contentBase: './example',
   },
   target: 'web',
   output: {
