@@ -1,4 +1,5 @@
 # Bot challenge game module
+[![Build Status](https://travis-ci.org/Galiaf47/bot-challenge.svg?branch=master)](https://travis-ci.org/Galiaf47/bot-challenge)
 
 ## Install for web
 ```

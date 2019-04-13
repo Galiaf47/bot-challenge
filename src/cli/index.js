@@ -14,6 +14,7 @@ process.argv.forEach((arg, index) => {
         const file = fs.readFileSync(pair[1], 'utf8');
         userBots[pair[0]] = game.compile(file);
       } catch (e) {
+        // eslint-disable-next-line no-console
         console.error('Error:', e);
       }
     }
@@ -23,4 +24,5 @@ process.argv.forEach((arg, index) => {
 
 const timeline = game.simulate(userBots);
 
+// eslint-disable-next-line no-console
 console.log(JSON.stringify(timeline));

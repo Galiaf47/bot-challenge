@@ -1,9 +1,11 @@
 {
   "name": "bot-challenge",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "main": "./lib/main.js",
-  "module": "./src/index.js",
+  "files": [
+    "lib"
+  ],
   "dependencies": {
     "body-parser": "^1.18.3",
     "cors": "^2.8.5",
@@ -17,6 +19,9 @@
   "scripts": {
     "build": "webpack",
     "start": "webpack-dev-server --open",
+    "prepack": "npm run prepack:build && npm run prepack:flow",
+    "prepack:build": "npm run webpack",
+    "prepack:flow": "flow-copy-source src lib",
     "eslint": "eslint src/",
     "flow": "flow"
   },
@@ -77,6 +82,7 @@
     "eslint-plugin-jest": "^22.4.1",
     "eslint-plugin-jsx-a11y": "^6.1.1",
     "file-loader": "^3.0.1",
+    "flow-copy-source": "^2.0.3",
     "nodemon": "^1.18.9",
     "webpack": "^4.29.6",
     "webpack-cli": "^3.3.0",
