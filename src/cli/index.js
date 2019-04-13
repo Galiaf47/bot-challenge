@@ -14,14 +14,13 @@ process.argv.forEach((arg, index) => {
         const file = fs.readFileSync(pair[1], 'utf8');
         userBots[pair[0]] = game.compile(file);
       } catch (e) {
-        console.log('Error:', e);
+        console.error('Error:', e);
       }
     }
   }
 });
 
-console.log(userBots);
 
 const timeline = game.simulate(userBots);
 
-console.log(JSON.stringify(timeline[timeline.length - 1].players.length));
+console.log(JSON.stringify(timeline));
