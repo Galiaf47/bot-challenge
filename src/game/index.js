@@ -4,12 +4,7 @@ import Vector from 'victor';
 import _ from 'lodash';
 
 import type {
-  GameState,
-  Player,
-  Cell,
-  UpdatePlayerFunction,
-  TimelineItem,
-  Timeline,
+  GameState, Player, Cell, UpdatePlayerFunction, TimelineItem, Timeline, Id,
 } from './types';
 import settings from '../settings';
 
@@ -28,33 +23,30 @@ const getRandomPosition = () => (
     Math.round(Math.random() * settings.fieldSize))
 );
 
-const getInitialGameState = (cellsCount: number, snacksCount: number): GameState => ({
-  players: _.times(cellsCount, () => {
-    const id = getId();
+type InitialPlayer = {
+  id: Id,
+}
 
-    return {
-      id,
-      color: `#${Math.round(Math.random() * 250).toString(16)}${Math.round(Math.random() * 256).toString(16)}${Math.round(Math.random() * 256).toString(16)}`,
-      cells: [{
-        id: getId(),
-        parentId: id,
-        pos: getRandomPosition(),
-        dir: new Vector(1, 0),
-        velocity: 0,
-        size: Math.round(Math.random() * 16) + 16,
-        charge: 0,
-        split: 0,
-      }],
-      split: false,
-    };
-  }),
+const getInitialGameState = (players: InitialPlayer[], snacksCount: number): GameState => ({
+  players: _.map(players, player => ({
+    id: player.id,
+    cells: [{
+      id: getId(),
+      parentId: player.id,
+      pos: getRandomPosition(),
+      dir: new Vector(1, 0),
+      velocity: 0,
+      size: Math.round(Math.random() * 16) + 16,
+      charge: 0,
+      split: 0,
+    }],
+    split: false,
+  })),
   snacks: _.times(snacksCount, () => ({
     id: getId(),
     pos: getRandomPosition(),
   })),
 });
-
-const initialGameState: GameState = getInitialGameState(10, 100);
 
 function restrictEdges(pos, size) {
   return new Vector(
@@ -168,11 +160,11 @@ const getEnemies = (players: Player[], player: Player): Cell[] => _(players)
   .flatten()
   .value();
 
-function update(gameState: GameState, playerFunction: Function): GameState {
+function update(gameState: GameState, bots: {[Id]: UpdatePlayerFunction}): GameState {
   // TODO: try-catch for playerFuncion
   try {
     const updatedPlayers: Player[] = gameState.players.map(player => (
-      applyFunctionResult(playerFunction[player.id](player, getEnemies(gameState.players, player)))
+      applyFunctionResult(bots[player.id](player, getEnemies(gameState.players, player)))
     ));
     const players = mergeCells(updatedPlayers);
 
@@ -190,6 +182,7 @@ const stateToTimelineItem = (state: GameState): TimelineItem => ({
     id: player.id,
     cells: _.map(player.cells, cell => ({
       id: cell.id,
+      playerId: player.id,
       pos: {
         x: Math.round(cell.pos.x),
         y: Math.round(cell.pos.y),
@@ -203,13 +196,14 @@ const stateToTimelineItem = (state: GameState): TimelineItem => ({
   })),
 });
 
-function simulate(updatePlayer: {[number]: UpdatePlayerFunction}): Timeline {
-  let lastState: GameState = getInitialGameState(_.size(updatePlayer), 0);
+function simulate(bots: {[number]: UpdatePlayerFunction}): Timeline {
+  const players = _.map(bots, (fn, id) => ({id: _.toNumber(id)}));
+  let lastState: GameState = getInitialGameState(players, 0);
   let cicle: number = 1;
   const timeline: Timeline = [stateToTimelineItem(lastState)];
 
   while (cicle < CICLES && _.size(lastState.players) > 1) {
-    lastState = update(lastState, updatePlayer);
+    lastState = update(lastState, bots);
     cicle += 1;
     timeline.push(stateToTimelineItem(lastState));
   }
@@ -227,6 +221,6 @@ export {
   update,
   simulate,
   compile,
-  initialGameState,
   getInitialGameState,
+  stateToTimelineItem,
 };

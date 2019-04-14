@@ -15,7 +15,7 @@ const moduleConfig = {
 const config = {
   mode: 'development',
   entry: {
-    main: './src/index.js',
+    index: './src/index.js',
   },
   devtool: 'inline-source-map',
   devServer: {
@@ -34,7 +34,7 @@ const config = {
 const cliConfig = {
   mode: 'production',
   entry: {
-    cli: './src/cli/index.js',
+    cli: './src/cli.js',
   },
   target: 'node',
   output: {

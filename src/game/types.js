@@ -5,6 +5,8 @@ import Victor from 'victor';
 export type Id = number;
 
 export type TimelineCell = {
+  id: Id,
+  playerId: Id,
   pos: {
     x: number,
     y: number,
@@ -44,7 +46,6 @@ export type Player = {
   id: Id,
   cells: Cell[],
   split: boolean,
-  color: string,
 };
 
 export type Snack = {
@@ -59,4 +60,4 @@ export type Game = {|
 
 export type GameState = Game;
 
-export type UpdatePlayerFunction = (player: Player, enemies: Cell[], snacks: Snack[]) => Player;
+export type UpdatePlayerFunction = (player: Player, enemies: Cell[]) => Player;

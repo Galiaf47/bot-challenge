@@ -6,62 +6,52 @@ import {
 } from 'pixi.js';
 import _ from 'lodash';
 
-import type {Timeline, TimelineItem, TimelineCell} from 'game/types';
-import settings from '../settings';
-
+import type {
+  Id, TimelineItem, TimelineCell,
+} from 'game/types';
+import settings from './settings';
 
 const MAX_ZOOM = settings.windowSize / settings.fieldSize;
 
-type DrawOptions = {
+type PlayerOption = {
+  id: Id,
+  color: string,
+};
+
+export type DrawOptions = {
   canvasId: string,
   backgroundUrl: string,
-  onReady: () => void,
+  players: PlayerOption[],
+  onReady?: () => void,
 };
 
 type CanvasCell = Graphics;
-
-function createCell(cell) {
-  const circle = new Graphics();
-  // circle.beginFill(parseInt(cell.color.replace(/^#/, ''), 16));
-  circle.beginFill(0x005500);
-  circle.drawCircle(0, 0, 1);
-  circle.endFill();
-  circle.x = cell.pos.x;
-  circle.y = cell.pos.y;
-  circle.scale.set(cell.size);
-  circle.id = cell.id;
-
-  return circle;
-}
 
 class Draw {
   app: Application;
 
   loader: Loader;
 
-  play: boolean = false;
-
-  timeline: Timeline = [];
-
-  step: number = 0;
+  players: {[Id]: PlayerOption};
 
   cells: {[string]: CanvasCell} = {};
 
-  followId: ?string;
+  followId: ?Id;
 
   backgroundUrl: ?string;
 
-  onReady: () => void;
+  onReady: ?() => void;
 
-  onUpdate: (step: number) => void;
+  onUpdate: ?(step: number) => void;
 
-  constructor({canvasId, onReady, backgroundUrl}: DrawOptions) {
-    this.onReady = onReady;
-    this.backgroundUrl = backgroundUrl;
-    this.initCanvas(canvasId);
+  constructor(options: DrawOptions) {
+    this.onReady = options.onReady;
+    this.players = _.keyBy(options.players, 'id');
+    this.backgroundUrl = options.backgroundUrl;
+    this.initApp(options.canvasId);
   }
 
-  initCanvas(id: string) {
+  initApp(id: string) {
     this.app = new Application({
       view: document.getElementById(id),
       width: settings.windowSize,
@@ -70,10 +60,14 @@ class Draw {
       autoStart: false,
     });
 
-    this.loader = Loader.shared;
+    this.app.ticker.add(() => this.loop && this.loop());
+    this.loader = new Loader();
     this.backgroundUrl && this.loader.add(this.backgroundUrl);
     this.loader.load(this.setup);
   }
+
+  // eslint-disable-next-line class-methods-use-this
+  loop() {}
 
   setup = (loader: any, resources: {[string]: any}) => {
     if (this.backgroundUrl && resources[this.backgroundUrl]) {
@@ -81,7 +75,7 @@ class Draw {
     }
     this.app.render();
 
-    this.onReady();
+    this.onReady && this.onReady();
   }
 
   setBackground(texture: Texture) {
@@ -94,45 +88,41 @@ class Draw {
     this.app.stage.removeChildren();
   }
 
-  setTimeline(timeline: Timeline) {
-    !_.isEmpty(this.cells) && this.clearScene();
-
-    this.timeline = timeline;
-    this.step = 0;
-
-    this.cells = _(timeline[0].players)
+  initGraphicObjects(timelineItem: TimelineItem): void {
+    this.cells = _(timelineItem.players)
       .map('cells')
       .flatten()
-      .map(cell => createCell(cell))
+      .map(cell => this.createCell(cell))
       .keyBy('id')
       .value();
 
     this.app.stage.addChild(..._.values(this.cells));
   }
 
-  loop() {
-    // TODO: possible double loop because of start()
-    this.play && requestAnimationFrame(() => {
-      this.step += 1;
-      if (this.step >= _.size(this.timeline) - 1) {
-        this.stop();
-      }
+  createCell(cell: TimelineCell) {
+    const {color} = this.players[cell.playerId];
+    const circle = new Graphics();
 
-      this.update(this.timeline[this.step]);
-      this.loop();
-    });
+    circle.beginFill(parseInt(color.replace(/^#/, ''), 16));
+    circle.drawCircle(0, 0, 1);
+    circle.endFill();
+    circle.x = cell.pos.x;
+    circle.y = cell.pos.y;
+    circle.scale.set(cell.size);
+    circle.id = cell.id;
+
+    return circle;
   }
 
   start() {
-    this.play = true;
-    this.loop();
+    this.app.start();
   }
 
   stop() {
-    this.play = false;
+    this.app.stop();
   }
 
-  setFollow(id: ?string) {
+  setFollow(id: ?Id) {
     this.followId = id;
   }
 
@@ -146,7 +136,7 @@ class Draw {
       .keyBy('id')
       .value();
     const newCellsIds = _.difference(_.keys(gameCells), _.keys(this.cells));
-    const newCells = _.map(newCellsIds, id => createCell(gameCells[id]));
+    const newCells = _.map(newCellsIds, id => this.createCell(gameCells[id]));
     _.isEmpty(newCells) || this.app.stage.addChild(...newCells);
 
     this.cells = {
@@ -180,7 +170,6 @@ class Draw {
     }
 
     this.app.render();
-    this.onUpdate && (this.step % settings.fps === 0) && this.onUpdate(this.step);
   }
 
   viewportTo(cell: ?TimelineCell) {

@@ -1,5 +1,5 @@
 import fs from 'fs';
-import * as game from '../game';
+import * as game from './game';
 
 const SEPARATOR = '=';
 

@@ -1,4 +1,3 @@
-
 function updatePlayer(player, enemies) {
   let split = false;
 
