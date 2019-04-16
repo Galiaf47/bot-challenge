@@ -4,7 +4,8 @@ import _ from 'lodash';
 
 import Draw, {type DrawOptions} from './Draw';
 import {getInitialGameState, stateToTimelineItem, update} from './game';
-import type {Id, UpdatePlayerFunction, GameState} from './game/types';
+import type {Id, UpdatePlayerFunction} from './game/types';
+import GameState from './game/GameState';
 
 type Options = DrawOptions & {
   playersCount: number;

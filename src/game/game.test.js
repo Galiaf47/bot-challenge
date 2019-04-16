@@ -4,7 +4,7 @@ import Vector from 'victor';
 import _ from 'lodash';
 
 import {getMergedCells} from './index';
-import {type Cell} from './types';
+import Cell from './Cell';
 
 let id = 0;
 
@@ -13,25 +13,20 @@ const getId = () => {
   return id;
 };
 
-const createCell = (cell?: {}): Cell => ({
-  id: getId(),
-  pos: new Vector(2, 2),
-  dir: new Vector(1, 0),
-  velocity: 0,
-  size: 2,
-  parentId: 1,
-  charge: 0,
-  split: 0,
-  ...cell,
-});
+const createCell = (parentId = 1, size = 2): Cell => {
+  const newCell = new Cell(parentId, new Vector(2, 2));
+  newCell.mass = size;
+  newCell.id = getId();
+  return newCell;
+};
 
 test('Cells merged', () => {
   const cells = [
-    createCell({parentId: 1, size: 3}),
-    createCell({parentId: 1, size: 3}),
-    createCell({parentId: 2, size: 5}),
-    createCell({parentId: 3, size: 3}),
-    createCell({parentId: 4, size: 4}),
+    createCell(1, 3),
+    createCell(1, 3),
+    createCell(2, 5),
+    createCell(3, 3),
+    createCell(4, 4),
   ];
   const mergedCells = getMergedCells(cells);
 
@@ -41,16 +36,16 @@ test('Cells merged', () => {
 
 test('Same size cells not merged', () => {
   const cells = [
-    createCell({parentId: 1}),
-    createCell({parentId: 2}),
-    createCell({parentId: 3}),
-    createCell({parentId: 4}),
-    createCell({parentId: 5}),
+    createCell(1),
+    createCell(2),
+    createCell(3),
+    createCell(4),
+    createCell(5),
   ];
   const mergedCells = getMergedCells(cells);
 
   expect(mergedCells.length).toBe(5);
-  expect(mergedCells[0].size).toBe(2);
+  expect(mergedCells[0].mass).toBe(2);
 });
 
 test('Same size cells merged', () => {
@@ -64,5 +59,5 @@ test('Same size cells merged', () => {
   const mergedCells = getMergedCells(cells);
 
   expect(mergedCells.length).toBe(1);
-  expect(mergedCells[0].size).toBe(10);
+  expect(mergedCells[0].mass).toBe(10);
 });

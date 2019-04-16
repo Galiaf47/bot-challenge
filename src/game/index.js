@@ -1,52 +1,29 @@
+/* eslint-disable no-param-reassign */
 // @flow
 
 import Vector from 'victor';
 import _ from 'lodash';
 
 import type {
-  GameState, Player, Cell, UpdatePlayerFunction, TimelineItem, Timeline, Id,
+  UpdatePlayerFunction, TimelineItem, Timeline, Id,
 } from './types';
 import settings from '../settings';
+import GameState from './GameState';
+import Cell from './Cell';
+import Player from './Player';
+import {getId} from './utils';
 
 const FPS = settings.fps;
 const TIME = settings.roundTime;
 const CICLES = FPS * TIME;
 
-let idCounter = 0;
-const getId = (): number => {
-  idCounter += 1;
-  return idCounter;
-};
-
-const getRandomPosition = () => (
-  new Vector(Math.round(Math.random() * settings.fieldSize),
-    Math.round(Math.random() * settings.fieldSize))
-);
-
 type InitialPlayer = {
   id: Id,
 }
 
-const getInitialGameState = (players: InitialPlayer[], snacksCount: number): GameState => ({
-  players: _.map(players, player => ({
-    id: player.id,
-    cells: [{
-      id: getId(),
-      parentId: player.id,
-      pos: getRandomPosition(),
-      dir: new Vector(1, 0),
-      velocity: 0,
-      size: Math.round(Math.random() * 16) + 16,
-      charge: 0,
-      split: 0,
-    }],
-    split: false,
-  })),
-  snacks: _.times(snacksCount, () => ({
-    id: getId(),
-    pos: getRandomPosition(),
-  })),
-});
+const getInitialGameState = (
+  players: InitialPlayer[], snacksCount: number,
+): GameState => new GameState(players, snacksCount);
 
 function restrictEdges(pos, size) {
   return new Vector(
@@ -84,23 +61,22 @@ function applyFunctionResult(player: Player): Player {
   const {cells, split} = player;
   const newCells = canSplit(split, cells) ? splitCells(cells) : cells;
 
-  return {
-    ...player,
-    cells: _.map(newCells, (obj) => {
-      const {dir} = obj;
-      const velocity = obj.velocity - (obj.size * 0.01);
-      const pos = obj.pos.clone().add(dir.clone().multiplyScalar(velocity));
+  player.cells = _.map(newCells, (obj) => {
+    const {dir} = obj;
+    // TODO: if mass big enough there will be no velocity
+    const velocity = obj.velocity - (obj.mass * 0.0001);
+    const pos = obj.pos.clone().add(dir.clone().multiplyScalar(velocity));
 
-      return ({
-        ...obj,
-        pos: restrictEdges(pos, obj.size),
-        velocity: velocity * settings.ballFriction,
-        charge: obj.charge ? obj.charge - 1 : 0,
-        split: obj.split ? obj.split - 1 : 0,
-      });
-    }),
-    split: false,
-  };
+    obj.pos = restrictEdges(pos, obj.size);
+    obj.velocity = velocity * settings.ballFriction;
+    obj.charge = obj.charge ? obj.charge - 1 : 0;
+    obj.split = obj.split ? obj.split - 1 : 0;
+
+    return obj;
+  });
+  player.split = false;
+
+  return player;
 }
 
 function checkCollision(currentCell: Cell, targetCell: Cell): boolean {
@@ -108,29 +84,29 @@ function checkCollision(currentCell: Cell, targetCell: Cell): boolean {
 }
 
 function isMergeableSibling(current: Cell, target: Cell): boolean {
-  return current.parentId === target.parentId && !current.split && !target.split;
+  return current.playerId === target.playerId && !current.split && !target.split;
 }
 
 export const getMergedCells = (cells: Cell[]): Cell[] => cells.reduce((result, cell: Cell) => {
   _.forEach(cells, (target) => {
-    if (cell.id === target.id || !cell.size) {
+    if (cell.id === target.id || !cell.mass) {
       return;
     }
 
     if (
       checkCollision(cell, target)
       && (
-        cell.size > target.size
+        cell.mass > target.mass
         || isMergeableSibling(cell, target)
       )) {
       /* eslint-disable no-param-reassign */
-      cell.size += target.size;
-      target.size = 0;
+      cell.mass += target.mass;
+      target.mass = 0;
       /* eslint-enable no-param-reassign */
     }
   });
 
-  cell.size && result.push(cell);
+  cell.mass && result.push(cell);
 
   return result;
 }, []);
@@ -139,11 +115,12 @@ const cellsToPlayers = (players: Player[], cells: Cell[]) => {
   const playersMap = _.keyBy(players, 'id');
 
   return _(cells)
-    .groupBy('parentId')
-    .map((cellsGroup, id) => ({
-      ...playersMap[id],
-      cells: cellsGroup,
-    }))
+    .groupBy('playerId')
+    .map((cellsGroup, id) => {
+      const player = playersMap[id];
+      player.cells = cellsGroup;
+      return player;
+    })
     .value();
 };
 
@@ -166,30 +143,33 @@ function update(gameState: GameState, bots: {[Id]: UpdatePlayerFunction}): GameS
     const updatedPlayers: Player[] = gameState.players.map(player => (
       applyFunctionResult(bots[player.id](player, getEnemies(gameState.players, player)))
     ));
-    const players = mergeCells(updatedPlayers);
-
-    return {
-      ...gameState,
-      players,
-    };
+    // eslint-disable-next-line no-param-reassign
+    gameState.players = mergeCells(updatedPlayers);
   } catch (e) {
-    return gameState;
+    // eslint-disable-next-line no-console
+    console.error('Update game', e);
   }
+
+  return gameState;
 }
 
+const stateCellToTimelineCell = (cell: Cell) => ({
+  id: cell.id,
+  playerId: cell.playerId,
+  pos: {
+    x: Math.round(cell.pos.x),
+    y: Math.round(cell.pos.y),
+  },
+  size: cell.size,
+});
+
+const statePlayerToTimelinePlayer = (player: Player) => ({
+  id: player.id,
+  cells: _.map(player.cells, stateCellToTimelineCell),
+});
+
 const stateToTimelineItem = (state: GameState): TimelineItem => ({
-  players: _.map(state.players, player => ({
-    id: player.id,
-    cells: _.map(player.cells, cell => ({
-      id: cell.id,
-      playerId: player.id,
-      pos: {
-        x: Math.round(cell.pos.x),
-        y: Math.round(cell.pos.y),
-      },
-      size: cell.size,
-    })),
-  })),
+  players: _.map(state.players, statePlayerToTimelinePlayer),
   snacks: _.map(state.snacks, snack => ({
     x: Math.round(snack.pos.x),
     y: Math.round(snack.pos.y),
