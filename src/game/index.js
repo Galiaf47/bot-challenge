@@ -5,7 +5,7 @@ import Vector from 'victor';
 import _ from 'lodash';
 
 import type {
-  UpdatePlayerFunction, TimelineItem, Timeline, Id,
+  UpdatePlayerFunction, Timeline, Id,
 } from './types';
 import settings from '../settings';
 import GameState from './GameState';
@@ -153,39 +153,16 @@ function update(gameState: GameState, bots: {[Id]: UpdatePlayerFunction}): GameS
   return gameState;
 }
 
-const stateCellToTimelineCell = (cell: Cell) => ({
-  id: cell.id,
-  playerId: cell.playerId,
-  pos: {
-    x: Math.round(cell.pos.x),
-    y: Math.round(cell.pos.y),
-  },
-  size: cell.size,
-});
-
-const statePlayerToTimelinePlayer = (player: Player) => ({
-  id: player.id,
-  cells: _.map(player.cells, stateCellToTimelineCell),
-});
-
-const stateToTimelineItem = (state: GameState): TimelineItem => ({
-  players: _.map(state.players, statePlayerToTimelinePlayer),
-  snacks: _.map(state.snacks, snack => ({
-    x: Math.round(snack.pos.x),
-    y: Math.round(snack.pos.y),
-  })),
-});
-
 function simulate(bots: {[number]: UpdatePlayerFunction}): Timeline {
   const players = _.map(bots, (fn, id) => ({id: _.toNumber(id)}));
   let lastState: GameState = getInitialGameState(players, 0);
   let cicle: number = 1;
-  const timeline: Timeline = [stateToTimelineItem(lastState)];
+  const timeline: Timeline = [lastState.toTimeline()];
 
   while (cicle < CICLES && _.size(lastState.players) > 1) {
     lastState = update(lastState, bots);
     cicle += 1;
-    timeline.push(stateToTimelineItem(lastState));
+    timeline.push(lastState.toTimeline());
   }
 
   return timeline;
@@ -202,5 +179,4 @@ export {
   simulate,
   compile,
   getInitialGameState,
-  stateToTimelineItem,
 };

@@ -3,7 +3,7 @@
 import _ from 'lodash';
 
 import Draw, {type DrawOptions} from './Draw';
-import {getInitialGameState, stateToTimelineItem, update} from './game';
+import {getInitialGameState, update} from './game';
 import type {Id, UpdatePlayerFunction} from './game/types';
 import GameState from './game/GameState';
 
@@ -39,13 +39,13 @@ class DrawSDK extends Draw {
 
   initState() {
     this.gameState = getInitialGameState(_.values(this.players), 100);
-    this.initGraphicObjects(stateToTimelineItem(this.gameState));
+    this.initGraphicObjects(this.gameState.toTimeline());
     this.setFollow(1);
   }
 
   loop() {
     this.gameState = update(this.gameState, this.bots);
-    this.update(stateToTimelineItem(this.gameState));
+    this.update(this.gameState.toTimeline());
   }
 
   applyBot(id: Id, func: UpdatePlayerFunction) {

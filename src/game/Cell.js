@@ -2,7 +2,7 @@
 
 import Vector from 'victor';
 
-import type {Id} from './types';
+import type {Id, TimelineCell} from './types';
 import {getId} from './utils';
 
 class Cell {
@@ -29,6 +29,18 @@ class Cell {
 
   get size() {
     return Math.sqrt(this.mass / Math.PI);
+  }
+
+  toTimeline(): TimelineCell {
+    return {
+      id: this.id,
+      playerId: this.playerId,
+      pos: {
+        x: Math.round(this.pos.x),
+        y: Math.round(this.pos.y),
+      },
+      size: this.size,
+    };
   }
 }
 
