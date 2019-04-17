@@ -1,7 +1,6 @@
 /* eslint-disable no-param-reassign */
 // @flow
 
-import Vector from 'victor';
 import _ from 'lodash';
 
 import type {
@@ -11,7 +10,6 @@ import settings from '../settings';
 import GameState from './GameState';
 import Cell from './Cell';
 import Player from './Player';
-import {getId} from './utils';
 
 const FPS = settings.fps;
 const TIME = settings.roundTime;
@@ -24,60 +22,6 @@ type InitialPlayer = {
 const getInitialGameState = (
   players: InitialPlayer[], snacksCount: number,
 ): GameState => new GameState(players, snacksCount);
-
-function restrictEdges(pos, size) {
-  return new Vector(
-    Math.max(Math.min(pos.x, settings.fieldSize - size), size),
-    Math.max(Math.min(pos.y, settings.fieldSize - size), size),
-  );
-}
-
-// TODO: /2 => round - diff to avoid mass loss
-const splitCells = (cells: Cell[]): Cell[] => _(cells).map(cell => [
-  {
-    ...cell,
-    size: cell.size / 2,
-    velocity: 0,
-    split: 500,
-  },
-  {
-    ...cell,
-    id: getId(),
-    size: cell.size / 2,
-    velocity: 20,
-    charge: 50,
-    split: 500,
-  },
-]).flatten().value();
-
-const canSplit = (split, cells) => (split
-  && _.size(cells) < 4
-  && _(cells)
-    .filter(cell => cell.size > 32 && !cell.charge)
-    .size() === _.size(cells)
-);
-
-function applyFunctionResult(player: Player): Player {
-  const {cells, split} = player;
-  const newCells = canSplit(split, cells) ? splitCells(cells) : cells;
-
-  player.cells = _.map(newCells, (obj) => {
-    const {dir} = obj;
-    // TODO: if mass big enough there will be no velocity
-    const velocity = obj.velocity - (obj.mass * 0.0001);
-    const pos = obj.pos.clone().add(dir.clone().multiplyScalar(velocity));
-
-    obj.pos = restrictEdges(pos, obj.size);
-    obj.velocity = velocity * settings.ballFriction;
-    obj.charge = obj.charge ? obj.charge - 1 : 0;
-    obj.split = obj.split ? obj.split - 1 : 0;
-
-    return obj;
-  });
-  player.split = false;
-
-  return player;
-}
 
 function checkCollision(currentCell: Cell, targetCell: Cell): boolean {
   return currentCell.pos.distance(targetCell.pos) <= Math.max(currentCell.size, targetCell.size);
@@ -140,9 +84,13 @@ const getEnemies = (players: Player[], player: Player): Cell[] => _(players)
 function update(gameState: GameState, bots: {[Id]: UpdatePlayerFunction}): GameState {
   // TODO: try-catch for playerFuncion
   try {
-    const updatedPlayers: Player[] = gameState.players.map(player => (
-      applyFunctionResult(bots[player.id](player, getEnemies(gameState.players, player)))
-    ));
+    const updatedPlayers: Player[] = gameState.players.map((player) => {
+      const botFn = bots[player.id];
+      const enemies = getEnemies(gameState.players, player);
+      const updateAction = botFn(player, enemies);
+      player.update(updateAction);
+      return player;
+    });
     // eslint-disable-next-line no-param-reassign
     gameState.players = mergeCells(updatedPlayers);
   } catch (e) {

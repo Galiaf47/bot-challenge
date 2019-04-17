@@ -1,5 +1,7 @@
 // @flow
 
+import Vector from 'victor';
+
 import Player from './Player';
 import Cell from './Cell';
 
@@ -32,4 +34,14 @@ export type TimelineItem = {
 
 export type Timeline = TimelineItem[];
 
-export type UpdatePlayerFunction = (player: Player, enemies: Cell[]) => Player;
+export type CellAction = {
+  velocity: number,
+  dir: Vector,
+};
+
+export type BotAction = {
+  cells: CellAction[],
+  split: boolean,
+};
+
+export type UpdatePlayerFunction = (player: Player, enemies: Cell[]) => BotAction;
