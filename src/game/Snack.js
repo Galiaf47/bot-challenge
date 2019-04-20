@@ -10,12 +10,19 @@ class Snack {
 
   pos: Vector;
 
+  eaten = false;
+
   constructor(pos: Vector) {
     this.pos = pos;
   }
 
+  markAsEaten() {
+    this.eaten = true;
+  }
+
   toTimeline(): TimelineSnack {
     return {
+      id: this.id,
       x: Math.round(this.pos.x),
       y: Math.round(this.pos.y),
     };

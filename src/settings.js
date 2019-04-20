@@ -9,6 +9,7 @@ const settings = {
   fps: 60,
   roundTime: 60, // sec
   simulationChunkSize: 100,
+  snackMass: 100,
 };
 
 export default settings;

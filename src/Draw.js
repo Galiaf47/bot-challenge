@@ -1,15 +1,16 @@
 // @flow
 
 import {
-  Application, Graphics,
-  TilingSprite, Loader, Texture,
+  Application, Graphics, Container, ParticleContainer,
+  TilingSprite, Loader, Texture, Sprite,
 } from 'pixi.js';
 import _ from 'lodash';
 
 import type {
-  Id, TimelineItem, TimelineCell,
+  Id, TimelineItem, TimelineCell, TimelinePlayer, TimelineSnack,
 } from 'game/types';
 import settings from './settings';
+import Cell from './cell.png';
 
 const MAX_ZOOM = settings.windowSize / settings.fieldSize;
 
@@ -26,15 +27,22 @@ export type DrawOptions = {
 };
 
 type CanvasCell = Graphics;
+type CanvasSnack = Graphics;
 
 class Draw {
   app: Application;
 
   loader: Loader;
 
+  cellsContainer: Container;
+
+  snacksContainer: ParticleContainer;
+
   players: {[Id]: PlayerOption};
 
   cells: {[string]: CanvasCell} = {};
+
+  snacks: {[string]: CanvasSnack} = {};
 
   followId: ?Id;
 
@@ -61,6 +69,9 @@ class Draw {
     });
 
     this.app.ticker.add(() => this.loop && this.loop());
+    this.cellsContainer = new Container();
+    this.snacksContainer = new ParticleContainer(1000);
+    this.app.stage.addChild(this.cellsContainer, this.snacksContainer);
     this.loader = new Loader();
     this.backgroundUrl && this.loader.add(this.backgroundUrl);
     this.loader.load(this.setup);
@@ -85,21 +96,38 @@ class Draw {
   }
 
   clearScene() {
-    this.app.stage.removeChildren();
+    this.cells = {};
+    this.snacks = {};
+    this.cellsContainer.removeChildren();
+    this.snacksContainer.removeChildren();
   }
 
   initGraphicObjects(timelineItem: TimelineItem): void {
-    this.cells = _(timelineItem.players)
+    this.initCells(timelineItem.players);
+    this.initSnacks(timelineItem.snacks);
+  }
+
+  initCells(players: TimelinePlayer[]): void {
+    this.cells = _(players)
       .map('cells')
       .flatten()
       .map(cell => this.createCell(cell))
       .keyBy('id')
       .value();
 
-    this.app.stage.addChild(..._.values(this.cells));
+    this.cellsContainer.addChild(..._.values(this.cells));
   }
 
-  createCell(cell: TimelineCell) {
+  initSnacks(snacks: TimelineSnack[]) {
+    this.snacks = _(snacks)
+      .map(snack => this.createSnack(snack))
+      .keyBy('id')
+      .value();
+
+    this.snacksContainer.addChild(..._.values(this.snacks));
+  }
+
+  createCell(cell: TimelineCell): CanvasCell {
     const {color} = this.players[cell.playerId];
     const circle = new Graphics();
 
@@ -112,6 +140,18 @@ class Draw {
     circle.id = cell.id;
 
     return circle;
+  }
+
+  // eslint-disable-next-line class-methods-use-this
+  createSnack(snack: TimelineSnack): CanvasSnack {
+    const sprite = Sprite.from(Cell);
+    sprite.id = snack.id;
+    sprite.x = snack.x;
+    sprite.y = snack.y;
+    sprite.width = 16;
+    sprite.height = 16;
+
+    return sprite;
   }
 
   start() {
@@ -127,17 +167,22 @@ class Draw {
   }
 
   update(item: TimelineItem) {
+    this.updateCells(item.players);
+    // this.updateSnacks(item.snacks);
+  }
+
+  updateCells(players: TimelinePlayer[]) {
     const deadPlayers = [];
     const alivePlayers = [];
-    const timelinePlayersById = _.keyBy(item.players, 'id');
-    const gameCells = _(item.players)
+    const timelinePlayersById = _.keyBy(players, 'id');
+    const gameCells = _(players)
       .map('cells')
       .flatten()
       .keyBy('id')
       .value();
     const newCellsIds = _.difference(_.keys(gameCells), _.keys(this.cells));
     const newCells = _.map(newCellsIds, id => this.createCell(gameCells[id]));
-    _.isEmpty(newCells) || this.app.stage.addChild(...newCells);
+    _.isEmpty(newCells) || this.cellsContainer.addChild(...newCells);
 
     this.cells = {
       ...this.cells,
@@ -160,7 +205,7 @@ class Draw {
       }
     });
 
-    this.app.stage.removeChild(..._(this.cells).pick(deadPlayers).values().value());
+    this.cellsContainer.removeChild(..._(this.cells).pick(deadPlayers).values().value());
     this.cells = _.pick(this.cells, alivePlayers);
 
     if (this.followId && timelinePlayersById[this.followId]) {
@@ -171,6 +216,10 @@ class Draw {
 
     this.app.render();
   }
+
+  // updateSnacks(snacks: TimelineSnack[]) {
+
+  // }
 
   viewportTo(cell: ?TimelineCell) {
     if (cell) {

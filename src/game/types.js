@@ -4,6 +4,7 @@ import Vector from 'victor';
 
 import Player from './Player';
 import Cell from './Cell';
+import Snack from './Snack';
 
 export type Id = number;
 
@@ -23,6 +24,7 @@ export type TimelinePlayer = {
 };
 
 export type TimelineSnack = {
+  id: Id,
   x: number,
   y: number,
 };
@@ -44,4 +46,4 @@ export type BotAction = {
   split: boolean,
 };
 
-export type UpdatePlayerFunction = (player: Player, enemies: Cell[]) => BotAction;
+export type UpdatePlayerFunction = (player: Player, enemies: Cell[], snacks: Snack[]) => BotAction;

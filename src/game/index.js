@@ -10,6 +10,7 @@ import settings from '../settings';
 import GameState from './GameState';
 import Cell from './Cell';
 import Player from './Player';
+import Snack from './Snack';
 
 const FPS = settings.fps;
 const TIME = settings.roundTime;
@@ -68,8 +69,9 @@ const cellsToPlayers = (players: Player[], cells: Cell[]) => {
     .value();
 };
 
-function mergeCells(players: Player[]): Player[] {
+function mergeCells(players: Player[], snacks: Snack[]): Player[] {
   const allCells = _(players).map('cells').flatten().value();
+  allCells.forEach(cell => cell.feedSnacks(snacks));
   const mergedCells = getMergedCells(allCells);
 
   return cellsToPlayers(players, mergedCells);
@@ -84,15 +86,16 @@ const getEnemies = (players: Player[], player: Player): Cell[] => _(players)
 function update(gameState: GameState, bots: {[Id]: UpdatePlayerFunction}): GameState {
   // TODO: try-catch for playerFuncion
   try {
+    const snacks = gameState.snacks.filter(snack => !snack.eaten);
     const updatedPlayers: Player[] = gameState.players.map((player) => {
       const botFn = bots[player.id];
       const enemies = getEnemies(gameState.players, player);
-      const updateAction = botFn(player, enemies);
+      const updateAction = botFn(player, enemies, snacks);
       player.update(updateAction);
       return player;
     });
     // eslint-disable-next-line no-param-reassign
-    gameState.players = mergeCells(updatedPlayers);
+    gameState.players = mergeCells(updatedPlayers, snacks);
   } catch (e) {
     // eslint-disable-next-line no-console
     console.error('Update game', e);
@@ -103,7 +106,7 @@ function update(gameState: GameState, bots: {[Id]: UpdatePlayerFunction}): GameS
 
 function simulate(bots: {[number]: UpdatePlayerFunction}): Timeline {
   const players = _.map(bots, (fn, id) => ({id: _.toNumber(id)}));
-  let lastState: GameState = getInitialGameState(players, 0);
+  let lastState: GameState = getInitialGameState(players, 100);
   let cicle: number = 1;
   const timeline: Timeline = [lastState.toTimeline()];
 

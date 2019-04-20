@@ -2,9 +2,12 @@
 
 import Vector from 'victor';
 
-import type {Id, TimelineCell, CellAction} from './types';
+import type {
+  Id, TimelineCell, CellAction,
+} from './types';
 import {getId} from './utils';
 import settings from '../settings';
+import Snack from './Snack';
 
 const MAX_VELOCITY = 5;
 
@@ -51,6 +54,38 @@ class Cell {
     this.pos = restrictEdges(pos, this.size);
     this.charge = this.charge ? this.charge - 1 : 0;
     this.split = this.split ? this.split - 1 : 0;
+  }
+
+  splitCell() {
+    const oldMass = this.mass;
+    this.mass = Math.round(oldMass / 2);
+    this.velocity = 0;
+    this.split = 500;
+
+    const newCell = new Cell(this.playerId, this.pos);
+    newCell.mass = oldMass - this.mass;
+    newCell.velocity = 20;
+    newCell.charge = 50;
+    newCell.split = 500;
+
+    return newCell;
+  }
+
+  feedSnacks(snacks: Snack[]) {
+    snacks.forEach((snack) => {
+      if (this.isInside(snack.pos) && !snack.eaten) {
+        this.eatSnack(snack);
+      }
+    });
+  }
+
+  eatSnack(snack: Snack) {
+    this.mass += settings.snackMass;
+    snack.markAsEaten();
+  }
+
+  isInside(targetPos: Vector) {
+    return this.pos.distance(targetPos) < this.size;
   }
 
   toTimeline(): TimelineCell {
