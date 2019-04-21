@@ -168,7 +168,7 @@ class Draw {
 
   update(item: TimelineItem) {
     this.updateCells(item.players);
-    // this.updateSnacks(item.snacks);
+    this.updateSnacks(item.snacks);
   }
 
   updateCells(players: TimelinePlayer[]) {
@@ -217,9 +217,23 @@ class Draw {
     this.app.render();
   }
 
-  // updateSnacks(snacks: TimelineSnack[]) {
+  updateSnacks(snacks: TimelineSnack[]) {
+    const snacksMap = _.keyBy(snacks, 'id');
+    const snackIds = _.keys(snacksMap);
+    const canvasSnacksIds = _.keys(this.snacks);
+    const newSnacksIds = _.difference(snackIds, canvasSnacksIds);
+    const newCanvasSnacks = _(snacksMap)
+      .pick(newSnacksIds)
+      .map(this.createSnack)
+      .value();
+    const eatenSnacks = _.pick(this.snacks, _.difference(canvasSnacksIds, snackIds));
 
-  // }
+    this.snacksContainer.removeChild(..._.values(eatenSnacks));
+    this.snacks = {
+      ..._.pick(this.snacks, snackIds),
+      ...newCanvasSnacks,
+    };
+  }
 
   viewportTo(cell: ?TimelineCell) {
     if (cell) {

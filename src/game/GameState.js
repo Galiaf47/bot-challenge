@@ -20,7 +20,9 @@ class GameState {
   toTimeline(): TimelineItem {
     return {
       players: this.players.map(player => player.toTimeline()),
-      snacks: this.snacks.map(snack => snack.toTimeline()),
+      snacks: this.snacks
+        .filter(snack => !snack.eaten)
+        .map(snack => snack.toTimeline()),
     };
   }
 }
