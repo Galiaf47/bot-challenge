@@ -71,7 +71,7 @@ class Draw {
     this.app.ticker.add(() => this.loop && this.loop());
     this.cellsContainer = new Container();
     this.snacksContainer = new ParticleContainer(1000);
-    this.app.stage.addChild(this.cellsContainer, this.snacksContainer);
+    this.app.stage.addChild(this.snacksContainer, this.cellsContainer);
     this.loader = new Loader();
     this.backgroundUrl && this.loader.add(this.backgroundUrl);
     this.loader.load(this.setup);
@@ -145,6 +145,7 @@ class Draw {
   // eslint-disable-next-line class-methods-use-this
   createSnack(snack: TimelineSnack): CanvasSnack {
     const sprite = Sprite.from(Cell);
+    sprite.anchor.set(0.5);
     sprite.id = snack.id;
     sprite.x = snack.x;
     sprite.y = snack.y;
