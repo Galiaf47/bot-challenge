@@ -3,7 +3,7 @@
 import Vector from 'victor';
 
 import {getId} from './utils';
-import type {Id, TimelineSnack} from './types';
+import type {Id, TimelineSnack, BotSnack} from './types';
 
 class Snack {
   id: Id = getId();
@@ -25,6 +25,13 @@ class Snack {
       id: this.id,
       x: Math.round(this.pos.x),
       y: Math.round(this.pos.y),
+    };
+  }
+
+  toBotParam(): BotSnack {
+    return {
+      x: this.pos.x,
+      y: this.pos.y,
     };
   }
 }

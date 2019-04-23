@@ -209,7 +209,7 @@ class Draw {
     this.cellsContainer.removeChild(..._(this.cells).pick(deadPlayers).values().value());
     this.cells = _.pick(this.cells, alivePlayers);
 
-    if (this.followId && timelinePlayersById[this.followId]) {
+    if (!_.isNil(this.followId) && timelinePlayersById[this.followId]) {
       this.viewportTo(timelinePlayersById[this.followId].cells[0]);
     } else {
       this.viewportTo(null);

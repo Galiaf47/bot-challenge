@@ -25,7 +25,7 @@ class DrawSDK extends Draw {
       ...options,
       players: _.times(playersCount, index => ({
         id: index,
-        color: index === 1 ? '#009900' : '#990000',
+        color: index === 0 ? '#009900' : '#990000',
       })),
     });
 
@@ -34,13 +34,13 @@ class DrawSDK extends Draw {
   }
 
   initBots(playerBot: UpdatePlayerFunction, enemyBot: UpdatePlayerFunction) {
-    this.bots = _.mapValues(this.players, player => (player.id === 1 ? playerBot : enemyBot));
+    this.bots = _.mapValues(this.players, player => (player.id === 0 ? playerBot : enemyBot));
   }
 
   initState() {
     this.gameState = getInitialGameState(_.values(this.players), 100);
     this.initGraphicObjects(this.gameState.toTimeline());
-    this.setFollow(1);
+    this.setFollow(0);
   }
 
   loop() {

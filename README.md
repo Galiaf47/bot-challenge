@@ -21,7 +21,7 @@ node node_modules/bot-challenge/lib/cli.js id=path/to/bot.js id2=path/to/bot2.js
 * No need to merge to finish
 * Winner takes max score
 * Winner position depends on total player cells mass at finish
-* If mass is the same players compared by lifetime
+* If mass is the same, players compared by lifetime
 
 ## Restrictions
 * Max velocity change
@@ -31,3 +31,5 @@ node node_modules/bot-challenge/lib/cli.js id=path/to/bot.js id2=path/to/bot2.js
 * Cells can't merge until timeout pass
 * Bot sees only limited radius around first cell
 * Bot vision radius depends on total player mass
+* Function execution should not take more than x ms
+* Function size should not be more than x kb minified

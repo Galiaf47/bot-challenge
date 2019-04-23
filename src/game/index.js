@@ -5,6 +5,7 @@ import _ from 'lodash';
 
 import type {
   UpdatePlayerFunction, Timeline, Id,
+  BotCell,
 } from './types';
 import settings from '../settings';
 import GameState from './GameState';
@@ -28,10 +29,6 @@ function checkCollision(currentCell: Cell, targetCell: Cell): boolean {
   return currentCell.pos.distance(targetCell.pos) <= Math.max(currentCell.size, targetCell.size);
 }
 
-function isMergeableSibling(current: Cell, target: Cell): boolean {
-  return current.playerId === target.playerId && !current.split && !target.split;
-}
-
 export const getMergedCells = (cells: Cell[]): Cell[] => cells.reduce((result, cell: Cell) => {
   _.forEach(cells, (target) => {
     if (cell.id === target.id || !cell.mass) {
@@ -40,13 +37,11 @@ export const getMergedCells = (cells: Cell[]): Cell[] => cells.reduce((result, c
 
     if (
       checkCollision(cell, target)
-      && (
-        cell.mass > target.mass
-        || isMergeableSibling(cell, target)
-      )) {
+      && cell.mass > target.mass
+    ) {
       /* eslint-disable no-param-reassign */
-      cell.mass += target.mass;
-      target.mass = 0;
+      // cell.mass += target.mass;
+      // target.mass = 0;
       /* eslint-enable no-param-reassign */
     }
   });
@@ -56,46 +51,45 @@ export const getMergedCells = (cells: Cell[]): Cell[] => cells.reduce((result, c
   return result;
 }, []);
 
-const cellsToPlayers = (players: Player[], cells: Cell[]) => {
-  const playersMap = _.keyBy(players, 'id');
+// const cellsToPlayers = (players: Player[], cells: Cell[]) => {
+//   const playersMap = _.keyBy(players, 'id');
 
-  return _(cells)
-    .groupBy('playerId')
-    .map((cellsGroup, id) => {
-      const player = playersMap[id];
-      player.cells = cellsGroup;
-      return player;
-    })
-    .value();
-};
+//   _(cells)
+//     .groupBy('playerId')
+//     .forEach((cellsGroup, id) => {
+//       const player = playersMap[id];
+//       player.cells = cellsGroup;
+//     });
+// };
 
-function mergeCells(players: Player[], snacks: Snack[]): Player[] {
+function mergeCells(players: Player[], snacks: Snack[]) {
   const allCells = _(players).map('cells').flatten().value();
   allCells.forEach(cell => cell.feedSnacks(snacks));
-  const mergedCells = getMergedCells(allCells);
+  // const mergedCells = getMergedCells(allCells);
 
-  return cellsToPlayers(players, mergedCells);
+  // cellsToPlayers(players, mergedCells);
 }
 
-const getEnemies = (players: Player[], player: Player): Cell[] => _(players)
+const getEnemies = (players: Player[], player: Player): BotCell[] => _(players)
   .without(player)
   .map('cells')
   .flatten()
+  .map(cell => cell.toBotParam())
   .value();
 
 function update(gameState: GameState, bots: {[Id]: UpdatePlayerFunction}): GameState {
   // TODO: try-catch for playerFuncion
   try {
     const snacks = gameState.snacks.filter(snack => !snack.eaten);
-    const updatedPlayers: Player[] = gameState.players.map((player) => {
+    const botSnacks = snacks.map(snack => snack.toBotParam());
+    gameState.players.forEach((player) => {
       const botFn = bots[player.id];
       const enemies = getEnemies(gameState.players, player);
-      const updateAction = botFn(player, enemies, snacks);
+      const updateAction = botFn(player.toBotParam(), enemies, botSnacks);
       player.update(updateAction);
-      return player;
     });
     // eslint-disable-next-line no-param-reassign
-    gameState.players = mergeCells(updatedPlayers, snacks);
+    mergeCells(gameState.players, snacks);
   } catch (e) {
     // eslint-disable-next-line no-console
     console.error('Update game', e);

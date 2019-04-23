@@ -3,38 +3,73 @@
 import Vector from 'victor';
 import _ from 'lodash';
 
-import type {Id, TimelinePlayer, CellAction} from './types';
+import type {
+  Id, TimelinePlayer, BotAction, BotCell,
+} from './types';
 import Cell from './Cell';
+import {checkCollision} from './utils';
+import settings from '../settings';
 
 class Player {
   id: Id;
 
   cells: Cell[] = [];
 
+  split: number = 0;
+
+  charge: number = 0;
+
   constructor(id: Id, pos: Vector) {
     this.id = id;
     this.cells = [new Cell(id, pos)];
   }
 
-  update({cells, split}: {+cells: CellAction[], +split: boolean}) {
-    const cellsActionsMap = _.keyBy(cells, 'id');
-    this.cells.forEach(cell => cell.update(cellsActionsMap[cell.id]));
-    this.canSplit(split) && this.splitCells();
+  update({cells, split}: BotAction) {
+    this.split = this.split ? this.split - 1 : 0;
+    this.charge = this.charge ? this.charge - 1 : 0;
+
+    this.cells.forEach((cell, index) => {
+      if (index < cells.length) {
+        cell.update(cells[index], !!this.charge);
+      }
+    });
+
+    split && this.canSplit() && this.splitCells();
+    this.canMerge() && this.mergeSplitCells();
   }
 
-  canSplit(split: boolean) {
+  canSplit(): boolean {
     return (
-      split
-      && _.size(this.cells) < 4
-      && _(this.cells)
-        .filter(cell => cell.size > 32 && !cell.charge)
-        .size() === _.size(this.cells)
+      _.size(this.cells) < settings.maxSplitCells
+      && !this.charge
     );
   }
 
-  splitCells() {
-    const newCells = this.cells.map(cell => cell.splitCell());
+  splitCells(): void {
+    const newCells = _(this.cells)
+      .map(cell => cell.splitCell())
+      .compact()
+      .value();
+
     this.cells.push(...newCells);
+    this.split = settings.splitTime;
+    this.charge = settings.chargeTime;
+  }
+
+  canMerge(): boolean {
+    return !this.split && this.cells.length > 1;
+  }
+
+  mergeSplitCells() {
+    for (let i = 0; i < this.cells.length; i += 1) {
+      for (let j = i + 1; j < this.cells.length; j += 1) {
+        if (checkCollision(this.cells[i], this.cells[j])) {
+          this.cells[i].eatCell(this.cells[j]);
+        }
+      }
+    }
+
+    this.cells = this.cells.filter(cell => !cell.eaten);
   }
 
   toTimeline(): TimelinePlayer {
@@ -42,6 +77,10 @@ class Player {
       id: this.id,
       cells: this.cells.map(cell => cell.toTimeline()),
     };
+  }
+
+  toBotParam(): BotCell[] {
+    return this.cells.map(cell => cell.toBotParam());
   }
 }
 

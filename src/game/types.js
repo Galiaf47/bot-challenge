@@ -1,11 +1,5 @@
 // @flow
 
-import Vector from 'victor';
-
-import Player from './Player';
-import Cell from './Cell';
-import Snack from './Snack';
-
 export type Id = number;
 
 export type TimelineCell = {
@@ -38,7 +32,20 @@ export type Timeline = TimelineItem[];
 
 export type CellAction = {
   velocity: number,
-  dir: Vector,
+  direction: number,
+};
+
+export type BotCell = {
+  x: number,
+  y: number,
+  size: number,
+  direction: number,
+  velocity: number,
+};
+
+export type BotSnack = {
+  x: number,
+  y: number,
 };
 
 export type BotAction = {
@@ -46,4 +53,8 @@ export type BotAction = {
   split: boolean,
 };
 
-export type UpdatePlayerFunction = (player: Player, enemies: Cell[], snacks: Snack[]) => BotAction;
+export type UpdatePlayerFunction = (
+  cells: BotCell[],
+  enemies: BotCell[],
+  snacks: BotSnack[],
+) => BotAction;

@@ -3,7 +3,7 @@
 import Vector from 'victor';
 
 import type {
-  Id, TimelineCell, CellAction,
+  Id, TimelineCell, CellAction, BotCell,
 } from './types';
 import {getId} from './utils';
 import settings from '../settings';
@@ -31,11 +31,9 @@ class Cell {
 
   velocity: number = 0;
 
-  mass: number = 500;
+  mass: number = settings.initialCellMass;
 
-  charge: number = 0;
-
-  split: number = 0;
+  eaten: boolean = false;
 
   constructor(playerId: Id, pos: Vector) {
     this.playerId = playerId;
@@ -46,27 +44,28 @@ class Cell {
     return Math.sqrt(this.mass / Math.PI);
   }
 
-  update({dir, velocity}: CellAction) {
-    // TODO: if mass big enough there will be no velocity
-    this.velocity = restrictMaxVelocity(velocity - (this.mass * 0.0001)) * settings.ballFriction;
-    const pos = this.pos.clone().add(dir.clone().multiplyScalar(this.velocity));
+  update({direction, velocity}: CellAction, charge: boolean) {
+    if (!charge) {
+      this.dir = Vector(0, 1).rotate(direction);
+      this.velocity = restrictMaxVelocity(velocity - (this.mass * 0.001));
+    }
 
+    const pos = this.pos.clone().add(this.dir.clone().multiplyScalar(this.velocity));
     this.pos = restrictEdges(pos, this.size);
-    this.charge = this.charge ? this.charge - 1 : 0;
-    this.split = this.split ? this.split - 1 : 0;
   }
 
   splitCell() {
+    if (this.mass < settings.minSplitMass) {
+      return null;
+    }
+
     const oldMass = this.mass;
     this.mass = Math.round(oldMass / 2);
-    this.velocity = 0;
-    this.split = 500;
 
-    const newCell = new Cell(this.playerId, this.pos);
+    const newCell = new Cell(this.playerId, this.pos.clone());
     newCell.mass = oldMass - this.mass;
-    newCell.velocity = 20;
-    newCell.charge = 50;
-    newCell.split = 500;
+    newCell.velocity = 6;
+    newCell.dir = this.dir.clone();
 
     return newCell;
   }
@@ -84,6 +83,16 @@ class Cell {
     snack.markAsEaten();
   }
 
+  eatCell(cell: Cell) {
+    this.mass += cell.mass;
+    cell.markAsEaten();
+  }
+
+  markAsEaten() {
+    this.mass = 0;
+    this.eaten = true;
+  }
+
   isInside(targetPos: Vector) {
     return this.pos.distance(targetPos) < this.size;
   }
@@ -97,6 +106,16 @@ class Cell {
         y: Math.round(this.pos.y),
       },
       size: this.size,
+    };
+  }
+
+  toBotParam(): BotCell {
+    return {
+      x: this.pos.x,
+      y: this.pos.y,
+      size: this.size,
+      direction: this.dir.angle(),
+      velocity: this.velocity,
     };
   }
 }

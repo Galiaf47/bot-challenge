@@ -19,37 +19,46 @@
 
     <div style="float: right;">
       <textarea id="bot1" rows="15" style="width: 400px;">
-        function updatePlayer(player, enemies, snacks) {
+        function updatePlayer(cells, enemies, snacks) {
+          function getDistance(o1, o2) {
+            return o1 && o2 ? Math.sqrt((o1.x-o2.x)**2 + (o1.y-o2.y)**2) : 0;
+          }
+          function getAngle(o2, o1) {
+            return Math.atan2(o2.x - o1.x, o1.y - o2.y);
+          }
+
           let split = false;
 
-          player.cells = player.cells ? player.cells.map(cell => {
-            let dir = cell.dir;
-            let velocity;
+          const newCells = cells.map(cell => {
+            let direction = cell.direction;
+            let velocity = cell.velocity;
 
-            const closest = snacks.sort((e1, e2) => (e1.pos.distance(cell.pos) - e2.pos.distance(cell.pos)))[0];
+            const closestSnack = snacks.sort((e1, e2) => (getDistance(e1, cell) - getDistance(e2, cell)))[0];
+            const closestEnemy = enemies.sort((e1, e2) => (getDistance(e1, cell) - getDistance(e2, cell)))[0];
+            const distanceToSnack = getDistance(closestSnack, cell);
+            const distanceToEnamy = getDistance(closestEnemy, cell);
 
             if(true) {
-              const distance = closest.pos.distance(cell.pos);
-              dir = closest.pos.clone().subtract(cell.pos).normalize();
+              direction = getAngle(cell, closestSnack)
               velocity = 3;
-              if (distance < cell.size * 4) {
+              if (distanceToSnack < cell.size * 4) {
                 split = true;
               }
             } else {
-              dir = closest.pos.clone().subtract(cell.pos).invert().normalize();
-              velocity = 5;
+              //dir = closest.pos.clone().subtract(cell.pos).invert().normalize();
+              //velocity = 5;
             }
 
-            if (cell.charge) velocity = 10;
+            return {
+              direction,
+              velocity,
+            };
+          });
 
-            cell.dir = dir;
-            cell.velocity = velocity;
-
-            return cell;
-          }) : player.cells;
-          player.split = split;
-
-          return player;
+          return {
+            split,
+            cells: newCells,
+          };
         }
       </textarea>
       <textarea id="bot2" rows="15" style="width: 400px;">
@@ -89,39 +98,39 @@
     </div>
     <script>
       const bot1 = document.getElementById('bot1');
-      const bot2 = document.getElementById('bot2');
+      // const bot2 = document.getElementById('bot2');
       const botFunction1 = botChallenge.compile(bot1.value);
-      const botFunction2 = botChallenge.compile(bot2.value);
+      // const botFunction2 = botChallenge.compile(bot2.value);
 
       const draw = new botChallenge.DrawSDK({
         canvasId: 'sdk',
         backgroundUrl: 'paper.jpg',
-        playersCount: 5,
+        playersCount: 1,
         playerBot: botFunction1,
-        enemyBot: botFunction2,
+        enemyBot: botFunction1,
       });
 
-      const timeline = botChallenge.simulate({
-        1: botFunction1,
-        2: botFunction2,
-        3: botFunction2,
-        4: botFunction2,
-        5: botFunction2,
-      });
+      // const timeline = botChallenge.simulate({
+      //   1: botFunction1,
+      //   2: botFunction1,
+      //   3: botFunction1,
+      //   4: botFunction1,
+      //   5: botFunction1,
+      // });
 
-      const drawGame = new botChallenge.DrawGame({
-        canvasId: 'game',
-        backgroundUrl: 'paper.jpg',
-        players: [
-          {id: 1, color: '#009900'},
-          {id: 2, color: '#990000'},
-          {id: 3, color: '#000099'},
-          {id: 4, color: '#009999'},
-          {id: 5, color: '#999900'},
-        ],
-        timeline,
-      });
-      drawGame.start();
+      // const drawGame = new botChallenge.DrawGame({
+      //   canvasId: 'game',
+      //   backgroundUrl: 'paper.jpg',
+      //   players: [
+      //     {id: 1, color: '#009900'},
+      //     {id: 2, color: '#990000'},
+      //     {id: 3, color: '#000099'},
+      //     {id: 4, color: '#009999'},
+      //     {id: 5, color: '#999900'},
+      //   ],
+      //   timeline,
+      // });
+      // drawGame.start();
     </script>
   </body>
 </html>

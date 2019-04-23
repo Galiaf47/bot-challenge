@@ -1,15 +1,17 @@
 // @flow
 
 const settings = {
-  playerSize: 32,
   windowSize: 600,
   fieldSize: 5000,
-  borderSize: 10,
-  ballFriction: 0.95,
   fps: 60,
   roundTime: 60, // sec
   simulationChunkSize: 100,
   snackMass: 100,
+  initialCellMass: 500,
+  minSplitMass: 700,
+  chargeTime: 20, // frames
+  splitTime: 500, // frames
+  maxSplitCells: 4,
 };
 
 export default settings;
